@@ -46,7 +46,7 @@
 
                         if (userData.role && userData.role === 'user') {
                             localStorage.setItem('userId', userId); // Store user ID in local storage
-                            window.location.href = 'index.html'; // Redirect to user dashboard
+                            window.location.href = 'home.html'; // Redirect to user dashboard
                         } else {
                             errorMessage.innerText = 'Unauthorized access! Only users can log in here.';
                         }
@@ -62,7 +62,7 @@
 </head>
 <body>
     <header>
-        <a href="home.html" class="home-link">Home Page</a>
+        <a href="index.html" class="home-link">Home Page</a>
     </header>
     <div class="form-container">
         <h1>User Login</h1>

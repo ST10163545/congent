@@ -1,14 +1,11 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Dashboard</title>
     <link rel="stylesheet" href="styles3.css">
-	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    
     <style>
-		
         .category {
             margin: 20px 0;
         }
@@ -18,31 +15,17 @@
             gap: 15px;
         }
         .book-card {
-            
-			width: 150px;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    text-align: center;
-    background-color: #fff;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            border: 1px solid #ccc;
+            padding: 10px;
+            width: 150px;
+            text-align: center;
+            border-radius: 5px;
+            cursor: pointer;
         }
         .book-card img {
             width: 100%;
             height: 200px;
             object-fit: cover;
-        }
-        .dashboard {
-            display: flex;
-            justify-content: space-around;
-            margin: 20px;
-        }
-        .card {
-            border: 1px solid #ccc;
-            padding: 20px;
-            border-radius: 5px;
-            text-align: center;
-            width: 30%;
         }
         .search-bar {
             margin: 20px;
@@ -68,7 +51,7 @@
     </style>
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js';
-        import { getFirestore, collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js';
+        import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyDVi8qTXuTrefxA7-DrwcefJVzjpBUVGvY",
@@ -82,37 +65,6 @@
 
         const app = initializeApp(firebaseConfig);
         const firestore = getFirestore(app);
-
-        async function loadStats() {
-            const userId = localStorage.getItem('userId');
-
-            if (!userId) {
-                console.error('User ID not found in localStorage. Redirecting to login.');
-                window.location.href = 'login.html';
-                return;
-            }
-
-            try {
-                // Fetch total books
-                const booksSnapshot = await getDocs(collection(firestore, 'Books'));
-                document.getElementById('totalBooks').textContent = booksSnapshot.size;
-
-                // Fetch user-specific reserved books
-                const reservedBooksQuery = query(collection(firestore, 'user_reserved_books'), where('userId', '==', userId));
-                const reservedBooksSnapshot = await getDocs(reservedBooksQuery);
-                document.getElementById('totalReservations').textContent = reservedBooksSnapshot.size;
-
-                // Fetch user-specific bought books
-                const boughtBooksQuery = query(collection(firestore, 'user_bought_books'), where('userId', '==', userId));
-                const boughtBooksSnapshot = await getDocs(boughtBooksQuery);
-                document.getElementById('totalTransactions').textContent = boughtBooksSnapshot.size;
-
-                // Load books by genre
-                loadBooksByGenre();
-            } catch (error) {
-                console.error('Error loading stats: ', error);
-            }
-        }
 
         async function loadBooksByGenre() {
             const genres = [
@@ -131,9 +83,11 @@
             const booksContainer = document.getElementById('booksContainer');
 
             try {
+                // Fetch books from Firestore
                 const booksSnapshot = await getDocs(collection(firestore, 'Books'));
                 const books = booksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+                // For each genre, create a section and filter books by genre
                 genres.forEach(genre => {
                     const genreContainer = document.createElement('div');
                     genreContainer.classList.add('category');
@@ -151,11 +105,9 @@
                                 <h4>${book.title}</h4>
                                 <p>${book.author}</p>
                             `;
-
                             bookCard.addEventListener('click', () => {
                                 window.location.href = `book_details.html?id=${book.id}`;
                             });
-
                             document.getElementById(`books-${genre}`).appendChild(bookCard);
                         });
                     } else {
@@ -169,7 +121,6 @@
             }
         }
 
-        // Search Function
         async function searchBooks() {
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
             const booksContainer = document.getElementById('booksContainer');
@@ -194,11 +145,9 @@
                             <h4>${book.title}</h4>
                             <p>${book.author}</p>
                         `;
-
                         bookCard.addEventListener('click', () => {
                             window.location.href = `book_details.html?id=${book.id}`;
                         });
-
                         booksContainer.appendChild(bookCard);
                     });
                 } else {
@@ -209,20 +158,9 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            loadStats();
-            
-            // Add event listener for Enter key
-            document.getElementById('searchInput').addEventListener('keypress', function(event) {
-                if (event.key === 'Enter') {
-                    searchBooks();
-                }
-            });
-
-            // Add event listener for the Search button
-            document.getElementById('searchButton').addEventListener('click', searchBooks);
-        });
+        document.addEventListener('DOMContentLoaded', loadBooksByGenre);
     </script>
+	
 </head>
 <body>
 <div class="container">
@@ -232,64 +170,40 @@
             <h2 style="margin: 0; font-size: 1.5rem; color: #333;">Light of Literacy</h2>
             <p style="margin: 0; font-size: 0.9rem; color: #666;">Illuminating the path to knowledge</p>
         </div>
-        <h1>User Dashboard</h1>
-		<div class="header-links"> 
-			<a href="user_cart.html" class="icon-link">
-			<i class="fas fa-shopping-cart"></i> <span>Cart</span>
-			</a>
-			<a href="user_favorites.html" class="icon-link">
-			<i class="fas fa-heart"></i> <span>Favorites</span>
-			</a>
-		</div>
+        <h1>Home Page</h1>
+		<a href="login.html" class="login-link">Login</a>
+		
     </header>
+	
 
     <nav>
         <a href="index.html">Home</a>
-        <a href="user_catalogue.html">Catalogue</a>
-        <a href="user_about_us.html">About Us</a>
-        <a href="contact_us.html">Contact Us</a>
-        <a href="user_account.html">My Account</a>
+        <a href="user_catalogue1.html">Catalogue</a>
+        <a href="user_about_us1.html">About Us</a>
+        <a href="contact_us1.html">Contact Us</a>
         
     </nav>
-    
-    <!-- Search Bar with Button -->
+
     <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="Search for books by title, author, genre, or ISBN">
-        <button id="searchButton">Search</button>
+        <input type="text" id="searchInput" placeholder="Search books by title, author, genre, or ISBN...">
+        <button onclick="searchBooks()">Search</button>
     </div>
 
-    <div class="container">
-        <div class="dashboard">
-            <div class="card">
-                <h2>Total Books</h2>
-                <p id="totalBooks">Loading...</p>
-            </div>
-            <div class="card">
-                <h2>Total Reservations</h2>
-                <p id="totalReservations">Loading...</p>
-            </div>
-            <div class="card">
-                <h2>Total Transactions</h2>
-                <p id="totalTransactions">Loading...</p>
-            </div>
-        </div>
+    <div id="booksContainer" class="container"></div>
 
-        <div id="booksContainer">
-            <!-- Books will be loaded here -->
-        </div>
-    </div>
-	<footer>
+    <footer>
         <p>
             <a href="index.html">Home</a>
-            <a href="user_catalogue.html">Catalogue</a>
-            <a href="user_about_us.html">About Us</a>
-            <a href="contact_us.html">Contact Us</a>
-			<a href="home.html">Log off</a>
+            <a href="user_catalogue1.html">Catalogue</a>
+            <a href="user_about_us1.html">About Us</a>
+            <a href="contact_us1.html">Contact Us</a>
+            <a href="admin_login.html">Admin Login</a>
+            <a href="librarian_login.html">Librarian Login</a>
+			
         </p>
         <div class="footer-details">
             <p>&copy; 2024 MN Designs. All rights reserved.</p>
-            
-			<p>
+            <p>
             <a href="https://www.google.com/maps/place/23+Jorissen+Street,+Braamfontein" target="_blank">23 Jorissen street, Braaamfontein</a> |
             <a href="tel:+27641057114">Phone: +2764 105 7114</a> |
             <a href="mailto:contact@library.com">Email: contact@library.com</a>
