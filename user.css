@@ -1,0 +1,15 @@
+/* User-specific styles */
+.user-dashboard {
+    background-color: #eafaf1;
+}
+
+.user-links a {
+    display: block;
+    margin: 10px 0;
+}
+
+.user-profile {
+    background-color: #dff9fb;
+    padding: 15px;
+    border-radius: 5px;
+}

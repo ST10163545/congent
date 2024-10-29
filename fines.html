@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overdue Fines</title>
+	<link rel="stylesheet" href="styles3.css">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js';
+    import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js';
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyDVi8qTXuTrefxA7-DrwcefJVzjpBUVGvY",
+        authDomain: "library-189c4.firebaseapp.com",
+        projectId: "library-189c4",
+        storageBucket: "library-189c4.appspot.com",
+        messagingSenderId: "33646061345",
+        appId: "1:33646061345:web:e5532c3f3d02006c7c0060",
+        measurementId: "G-8LV0Y2D39Z"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const firestore = getFirestore(app);
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const userId = localStorage.getItem('userId');
+        if (!userId) {
+            alert('User not logged in.');
+            window.location.href = 'login.html';
+            return;
+        }
+
+        displayOverdueBooks(userId);
+
+        // Set up the event listener for the payment button
+        document.getElementById('pay-fine-button').addEventListener('click', () => processPayment(userId));
+    });
+
+    async function displayOverdueBooks(userId) {
+        const overdueBooksContainer = document.getElementById('overdue-books');
+        overdueBooksContainer.innerHTML = '';
+        let totalFine = 0;
+
+        try {
+            const today = new Date();
+            const overdueBooksQuery = query(collection(firestore, 'user_reserved_books'), where('userId', '==', userId));
+            const reservedBooksSnapshot = await getDocs(overdueBooksQuery);
+
+            for (const doc of reservedBooksSnapshot.docs) {
+                const data = doc.data();
+                const dueDate = new Date(data.reservationDate);
+                dueDate.setDate(dueDate.getDate() + 14); // Assuming 2 weeks for due date
+
+                if (today > dueDate) {
+                    const bookDetails = await getBookDetails(data.bookId);
+                    const weeksOverdue = Math.ceil((today - dueDate) / (1000 * 60 * 60 * 24 * 7));
+                    const fine = weeksOverdue * 50; // R50 per week
+                    totalFine += fine;
+
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <div class="book-container">
+                            <img src="${bookDetails.imageUrl}" alt="${bookDetails.title}" class="book-image"/>
+                            <div class="book-info">
+                                <h4>${bookDetails.title}</h4>
+                                <p>Overdue by: ${weeksOverdue} week(s)</p>
+                                <p>Fine: R${fine}</p>
+                            </div>
+                        </div>
+                    `;
+                    overdueBooksContainer.appendChild(li);
+                }
+            }
+
+            const totalFineDisplay = document.getElementById('total-fine');
+            totalFineDisplay.textContent = `Total Fine: R${totalFine}`;
+        } catch (error) {
+            console.error('Error fetching overdue books:', error);
+        }
+    }
+
+    async function getBookDetails(bookId) {
+        const bookRef = doc(firestore, 'Books', bookId);
+        const bookDoc = await getDoc(bookRef);
+        return bookDoc.exists() ? bookDoc.data() : null;
+    }
+
+    async function processPayment(userId) {
+        const cardNumber = document.getElementById('card-number').value;
+        const expiryDate = document.getElementById('expiry-date').value;
+        const cvv = document.getElementById('cvv').value;
+
+        if (!cardNumber || !expiryDate || !cvv) {
+            alert('Please fill out all fields.');
+            return;
+        }
+
+        // Here you would normally process the payment through a payment gateway
+        alert('Fines paid successfully. Thank you!');
+
+        // Update reservationDate in Firestore for each overdue book
+        const overdueBooksQuery = query(collection(firestore, 'user_reserved_books'), where('userId', '==', userId));
+        const reservedBooksSnapshot = await getDocs(overdueBooksQuery);
+
+        const today = new Date().toISOString().split('T')[0]; // Format date as YYYY-MM-DD
+
+        reservedBooksSnapshot.forEach(async (doc) => {
+            const data = doc.data();
+            const dueDate = new Date(data.reservationDate);
+            dueDate.setDate(dueDate.getDate() + 14);
+
+            if (new Date() > dueDate) {
+                // Update the reservation date to today
+                const bookRef = doc.ref;
+                await updateDoc(bookRef, { reservationDate: today });
+            }
+        });
+
+        // Clear overdue books from the display
+        document.getElementById('overdue-books').innerHTML = '';
+        document.getElementById('total-fine').textContent = 'Total Fine: R0';
+
+        // Clear input fields in the payment section
+        document.getElementById('name').value = '';
+        document.getElementById('card-number').value = '';
+        document.getElementById('expiry-date').value = '';
+        document.getElementById('cvv').value = '';
+    }
+</script>
+
+    <style>
+        
+
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        h2, h3 {
+            color: #333;
+        }
+
+        #overdue-books {
+            list-style: none;
+            padding: 0;
+        }
+
+        .book-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 10px;
+        }
+
+        .book-image {
+            width: 100px;
+            height: 150px;
+            margin-right: 20px;
+        }
+
+        .book-info h4 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .book-info p {
+            margin: 5px 0;
+        }
+
+        button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #007BFF;
+        }
+
+        
+
+        #total-fine {
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+		<img src="pictures/Logo.png" alt="Logo" class="logo">
+        <div style="margin-left: 15px;">
+            <h2>Light of Literacy</h2>
+            <p>Illuminating the path to knowledge</p>
+        </div>
+        <h1>Overdue Fines</h1>
+		<div class="header-links"> 
+			<a href="user_cart.html" class="icon-link">
+			<i class="fas fa-shopping-cart"></i> <span>Cart</span>
+			</a>
+			<a href="user_favorites.html" class="icon-link">
+			<i class="fas fa-heart"></i> <span>Favorites</span>
+			</a>
+		</div>
+    </header>
+
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="user_catalogue.html">Catalogue</a>
+        <a href="user_about_us.html">About Us</a>
+		<a href="contact_us.html">Contact Us</a>
+        <a href="user_account.html">My Account</a>
+        
+    </nav>
+
+    <div class="container">
+        <h2>My Overdue Books</h2>
+        <ul id="overdue-books">
+            <!-- Overdue books will be listed here -->
+        </ul>
+        <p id="total-fine">Total Fine: R0</p>
+
+        <h3>Payment Section</h3>
+        <label for="name">Name on Card:</label>
+        <input type="text" id="name" placeholder="Card Name" required>
+		<br>
+        <label for="card-number">Card Number:</label>
+        <input type="text" id="card-number" required pattern="\d{16}" maxlength="16" placeholder="XXXX XXXX XXXX XXXX">
+        <br>
+		<label for="expiration">Expiration Date (MM/YY):</label>
+        <input type="text" id="expiry-date" required pattern="\d{2}/\d{2}" maxlength="5" placeholder="MM/YY">
+        <br>
+		<label for="cvv">CVV:</label>
+        <input type="text" id="cvv" required pattern="\d{3}" maxlength="3" placeholder="CVV">
+        <br><br>
+        <button id="pay-fine-button">Pay Fine</button>
+    </div>
+</body>
+</html>

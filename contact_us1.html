@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Us</title>
+    <link rel="stylesheet" href="styles3.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        .contact-details {
+            margin-bottom: 30px;
+        }
+        .contact-details p {
+            margin: 10px 0;
+        }
+        .contact-form {
+            display: flex;
+            flex-direction: column;
+        }
+        .contact-form label {
+            margin-top: 10px;
+        }
+        .contact-form input, .contact-form textarea {
+            padding: 10px;
+            margin-top: 5px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            width: 100%;
+        }
+        .contact-form button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .contact-form button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+
+    <script type="module">
+        // Import Firebase dependencies
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js';
+        import { getFirestore, doc, setDoc } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js';
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDVi8qTXuTrefxA7-DrwcefJVzjpBUVGvY",
+            authDomain: "library-189c4.firebaseapp.com",
+            projectId: "library-189c4",
+            storageBucket: "library-189c4.appspot.com",
+            messagingSenderId: "33646061345",
+            appId: "1:33646061345:web:e5532c3f3d02006c7c0060",
+            measurementId: "G-8LV0Y2D39Z"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const firestore = getFirestore(app);
+
+        // Function to handle form submission
+        async function submitContactForm(event) {
+            event.preventDefault(); // Prevent the form from submitting the traditional way
+            console.log("Form submitted"); // Debug output
+
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const message = document.getElementById('message').value;
+
+            console.log("Name:", name, "Email:", email, "Message:", message); // Debug output
+
+            try {
+                // Save the contact form data to Firestore
+                const docRef = doc(firestore, 'contact_us', new Date().toISOString());
+                await setDoc(docRef, {
+                    name: name,
+                    email: email,
+                    message: message,
+                    timestamp: new Date()
+                });
+
+                alert('Your message has been sent successfully.'); // This alert should trigger
+                // Clear the form
+                document.getElementById('contactForm').reset();
+            } catch (error) {
+                console.error('Error sending message:', error);
+                alert('There was an error sending your message. Please try again.');
+            }
+        }
+
+        // Bind the submit event after the DOM is loaded
+        document.addEventListener("DOMContentLoaded", function() {
+            const contactForm = document.getElementById('contactForm');
+            contactForm.addEventListener('submit', submitContactForm);
+        });
+    </script>
+</head>
+<body>
+
+    <header>
+        <img src="pictures/Logo.png" alt="Logo" style="width: 100px; height: auto;" class="logo">
+		<div style="margin-left: 15px;">
+            <h2 style="margin: 0; font-size: 1.5rem; color: #333;">Light of Literacy</h2>
+            <p style="margin: 0; font-size: 0.9rem; color: #666;">Illuminating the path to knowledge</p>
+        </div>
+		<h1>Contact Us</h1>
+		<a href="login.html" class="login-link">Login</a>
+    </header>
+    
+    <nav>
+        <a href="home.html">Home</a>
+        <a href="user_catalogue1.html">Catalogue</a>
+        <a href="user_about_us1.html">About Us</a>
+        <a href="contact_us1.html">Contact Us</a>
+        
+    </nav>
+
+    <div class="container">
+        <div class="contact-details">
+            <h2>Get in touch with us</h2>
+            
+            <p><strong>Phone:</strong> +2764 105 7114</p>
+            <p><strong>Email:</strong> contact@library.com</p>
+			<p><strong>Address:</strong> 23 Jorissen street, Braaamfontein,</p>
+			<iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2137.0025903191795!2d28.033244014567416!3d-26.193908606728407!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1e950b9300000001%3A0x335d35f228da3ccd!2sRosebank%20College%20%7C%20Braamfontein%20Campus!5e0!3m2!1sen!2sza!4v1729516864073!5m2!1sen!2sza" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+            <p>Feel free to contact us for any inquiries or issues regarding your library experience. We will get back to you as soon as possible.</p>
+        </div>
+
+        <div class="contact-form">
+            <h2>Send us a message</h2>
+            <form id="contactForm">
+                <label for="name">Your Name</label>
+                <input type="text" id="name" name="name" placeholder="Enter your name" required>
+
+                <label for="email">Your Email</label>
+                <input type="email" id="email" name="email" placeholder="Enter your email" required>
+
+                <label for="message">Message</label>
+                <textarea id="message" name="message" rows="5" placeholder="Enter your message" required></textarea>
+
+                <button type="submit">Submit</button>
+            </form>
+        </div>
+    </div>
+    
+    <footer>
+        <p>
+            <a href="home.html">Home</a>
+            <a href="user_catalogue1.html">Catalogue</a>
+            <a href="user_about_us1.html">About Us</a>
+            <a href="contact_us1.html">Contact Us</a>
+            <a href="admin_login.html">Admin Login</a>
+            <a href="librarian_login.html">Librarian Login</a>
+        </p>
+        <div class="footer-details">
+            <p>&copy; 2024 MN Designs. All rights reserved.</p>
+            <p>
+            <a href="https://www.google.com/maps/place/23+Jorissen+Street,+Braamfontein" target="_blank">23 Jorissen street, Braaamfontein</a> |
+            <a href="tel:+27641057114">Phone: +2764 105 7114</a> |
+            <a href="mailto:contact@library.com">Email: contact@library.com</a>
+        </p>
+        </div>
+    </footer>
+
+</body>
+</html>

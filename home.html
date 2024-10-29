@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Dashboard</title>
+    <link rel="stylesheet" href="styles3.css">
+    <style>
+        .category {
+            margin: 20px 0;
+        }
+        .books-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .book-card {
+            border: 1px solid #ccc;
+            padding: 10px;
+            width: 150px;
+            text-align: center;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .book-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+        .search-bar {
+            margin: 20px;
+            text-align: center;
+        }
+        .search-bar input {
+            padding: 10px;
+            width: 300px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .search-bar button {
+            padding: 10px 20px;
+            border: none;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .search-bar button:hover {
+            background-color: #45a049;
+        }
+    </style>
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js';
+        import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDVi8qTXuTrefxA7-DrwcefJVzjpBUVGvY",
+            authDomain: "library-189c4.firebaseapp.com",
+            projectId: "library-189c4",
+            storageBucket: "library-189c4.appspot.com",
+            messagingSenderId: "33646061345",
+            appId: "1:33646061345:web:e5532c3f3d02006c7c0060",
+            measurementId: "G-8LV0Y2D39Z"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const firestore = getFirestore(app);
+
+        async function loadBooksByGenre() {
+            const genres = [
+                "Fiction",
+                "Non-Fiction",
+                "Academic/Scholarly",
+                "Arts & Humanities",
+                "Social Sciences",
+                "Science & Technology",
+                "Children's & Young Adult",
+                "Graphic Novels & Comics",
+                "Poetry",
+                "Classics"
+            ];
+
+            const booksContainer = document.getElementById('booksContainer');
+
+            try {
+                // Fetch books from Firestore
+                const booksSnapshot = await getDocs(collection(firestore, 'Books'));
+                const books = booksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                // For each genre, create a section and filter books by genre
+                genres.forEach(genre => {
+                    const genreContainer = document.createElement('div');
+                    genreContainer.classList.add('category');
+                    genreContainer.innerHTML = `<h3>${genre}</h3><div class="books-container" id="books-${genre}"></div>`;
+                    booksContainer.appendChild(genreContainer);
+
+                    const filteredBooks = books.filter(book => Array.isArray(book.genres) && book.genres.includes(genre));
+
+                    if (filteredBooks.length > 0) {
+                        filteredBooks.forEach(book => {
+                            const bookCard = document.createElement('div');
+                            bookCard.classList.add('book-card');
+                            bookCard.innerHTML = `
+                                <img src="${book.imageUrl}" alt="${book.title}">
+                                <h4>${book.title}</h4>
+                                <p>${book.author}</p>
+                            `;
+                            bookCard.addEventListener('click', () => {
+                                window.location.href = `book_details.html?id=${book.id}`;
+                            });
+                            document.getElementById(`books-${genre}`).appendChild(bookCard);
+                        });
+                    } else {
+                        const noBooksMsg = document.createElement('p');
+                        noBooksMsg.textContent = 'No books available in this category.';
+                        document.getElementById(`books-${genre}`).appendChild(noBooksMsg);
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading books by genre: ', error);
+            }
+        }
+
+        async function searchBooks() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const booksContainer = document.getElementById('booksContainer');
+            booksContainer.innerHTML = ''; // Clear previous results
+
+            try {
+                const booksSnapshot = await getDocs(collection(firestore, 'Books'));
+                const books = booksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const filteredBooks = books.filter(book => 
+                    book.title.toLowerCase().includes(searchTerm) || 
+                    book.author.toLowerCase().includes(searchTerm) ||
+                    (Array.isArray(book.genres) && book.genres.join(', ').toLowerCase().includes(searchTerm)) ||
+                    (book.ISBN && book.ISBN.includes(searchTerm))
+                );
+
+                if (filteredBooks.length > 0) {
+                    filteredBooks.forEach(book => {
+                        const bookCard = document.createElement('div');
+                        bookCard.classList.add('book-card');
+                        bookCard.innerHTML = `
+                            <img src="${book.imageUrl}" alt="${book.title}">
+                            <h4>${book.title}</h4>
+                            <p>${book.author}</p>
+                        `;
+                        bookCard.addEventListener('click', () => {
+                            window.location.href = `book_details.html?id=${book.id}`;
+                        });
+                        booksContainer.appendChild(bookCard);
+                    });
+                } else {
+                    booksContainer.innerHTML = '<p>No books found.</p>';
+                }
+            } catch (error) {
+                console.error('Error searching books: ', error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadBooksByGenre);
+    </script>
+	
+</head>
+<body>
+<div class="container">
+    <header>
+		<img src="pictures/Logo.png" alt="Logo" style="width: 100px; height: auto;" class="logo">
+		<div style="margin-left: 15px;">
+            <h2 style="margin: 0; font-size: 1.5rem; color: #333;">Light of Literacy</h2>
+            <p style="margin: 0; font-size: 0.9rem; color: #666;">Illuminating the path to knowledge</p>
+        </div>
+        <h1>Home Page</h1>
+		<a href="login.html" class="login-link">Login</a>
+		
+    </header>
+	
+
+    <nav>
+        <a href="home.html">Home</a>
+        <a href="user_catalogue1.html">Catalogue</a>
+        <a href="user_about_us1.html">About Us</a>
+        <a href="contact_us1.html">Contact Us</a>
+        
+    </nav>
+
+    <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Search books by title, author, genre, or ISBN...">
+        <button onclick="searchBooks()">Search</button>
+    </div>
+
+    <div id="booksContainer" class="container"></div>
+
+    <footer>
+        <p>
+            <a href="home.html">Home</a>
+            <a href="user_catalogue1.html">Catalogue</a>
+            <a href="user_about_us1.html">About Us</a>
+            <a href="contact_us1.html">Contact Us</a>
+            <a href="admin_login.html">Admin Login</a>
+            <a href="librarian_login.html">Librarian Login</a>
+        </p>
+        <div class="footer-details">
+            <p>&copy; 2024 MN Designs. All rights reserved.</p>
+            <p>
+            <a href="https://www.google.com/maps/place/23+Jorissen+Street,+Braamfontein" target="_blank">23 Jorissen street, Braaamfontein</a> |
+            <a href="tel:+27641057114">Phone: +2764 105 7114</a> |
+            <a href="mailto:contact@library.com">Email: contact@library.com</a>
+        </p>
+        </div>
+    </footer>
+	</div>
+</body>
+</html>

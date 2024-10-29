@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout</title>
+    <link rel="stylesheet" href="styles3.css">
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js';
+        import { getFirestore, collection, doc, getDoc, addDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js';
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDVi8qTXuTrefxA7-DrwcefJVzjpBUVGvY",
+            authDomain: "library-189c4.firebaseapp.com",
+            projectId: "library-189c4",
+            storageBucket: "library-189c4.appspot.com",
+            messagingSenderId: "33646061345",
+            appId: "1:33646061345:web:e5532c3f3d02006c7c0060",
+            measurementId: "G-8LV0Y2D39Z"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const firestore = getFirestore(app);
+
+        // Load cart data and display checkout details
+        document.addEventListener('DOMContentLoaded', async () => {
+            const userId = localStorage.getItem('userId');
+            if (!userId) {
+                alert('User not logged in.');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // Retrieve cart from localStorage
+            const cart = JSON.parse(localStorage.getItem('cart')) || { borrow: [], buy: [] };
+            await displayCartSummary(cart.buy); // Display cart summary
+        });
+
+        // Function to fetch user details (including username) from Firestore
+        async function fetchUserDetails(userId) {
+            try {
+                const userDoc = await getDoc(doc(firestore, 'users', userId)); // Assuming 'Users' collection exists
+                if (userDoc.exists()) {
+                    return userDoc.data().username || 'Unknown User'; // Return username or a default
+                } else {
+                    console.log('No such user found!');
+                    return 'Unknown User';
+                }
+            } catch (error) {
+                console.error('Error fetching user details:', error);
+                return 'Unknown User';
+            }
+        }
+
+        // Function to fetch book details from Firestore
+        async function fetchBookDetails(bookId) {
+            try {
+                const bookDoc = await getDoc(doc(firestore, 'Books', bookId));
+                if (bookDoc.exists()) {
+                    return bookDoc.data(); // Return all book details
+                } else {
+                    console.log('No such book found!');
+                    return null;
+                }
+            } catch (error) {
+                console.error('Error fetching book details:', error);
+                return null;
+            }
+        }
+
+        // Function to display the cart summary
+        async function displayCartSummary(boughtBooks) {
+            const summaryContainer = document.getElementById('cart-summary');
+            let totalPrice = 0;
+            const bookListHTMLPromises = boughtBooks.map(async (book) => {
+                const bookDetails = await fetchBookDetails(book.id);
+                if (bookDetails) {
+                    totalPrice += book.price;
+                    return `<li>${bookDetails.title} - R${book.price}</li>`;
+                }
+                return '';
+            });
+
+            // Wait for all the book details to be fetched
+            const bookListHTML = await Promise.all(bookListHTMLPromises);
+
+            // Display cart summary and total price
+            summaryContainer.innerHTML = `
+                <h2>Cart Summary</h2>
+                <ul>
+                    ${bookListHTML.join('')}
+                </ul>
+                <p>Total: R${totalPrice}</p>
+            `;
+        }
+
+        // Function to process checkout and save data to Firestore
+async function processCheckout(userId) {
+    const cart = JSON.parse(localStorage.getItem('cart')) || { borrow: [], buy: [] };
+    const boughtBooks = cart.buy;
+
+    // Fetch the username of the user
+    const username = await fetchUserDetails(userId);
+
+    let transactionIds = []; // Array to store transaction IDs
+
+    // Add each book to Firestore with username
+    for (const book of boughtBooks) {
+        try {
+            const bookDetails = await fetchBookDetails(book.id); // Fetch book details
+
+            if (bookDetails && bookDetails.available > 0) {
+                // Update the quantity in Firestore
+                await updateDoc(doc(firestore, 'Books', book.id), {
+                    available: bookDetails.available - 1
+                });
+
+                // Add to user_bought_books collection and store the transaction ID
+                const docRef = await addDoc(collection(firestore, 'user_bought_books'), {
+                    userId: userId,
+                    username: username, // Save the username
+                    bookId: book.id,
+                    title: bookDetails.title, // Save the fetched title
+                    price: book.price,
+                    purchaseDate: new Date().toISOString()
+                });
+
+                // Push the transaction ID to the array
+                transactionIds.push(docRef.id);
+            } else {
+                alert(`Book "${bookDetails.title}" is not available for purchase.`);
+            }
+        } catch (error) {
+            console.error('Error saving bought book:', error);
+        }
+    }
+
+    // Clear the "Buy" section from Firestore
+    const cartRef = doc(firestore, 'carts', userId);
+    await updateDoc(cartRef, {
+        buy: [] // Clear the buy section
+    });
+
+    // Clear local storage and notify user with transaction ID
+    localStorage.removeItem('cart');
+    alert(`Checkout successful! Transaction ID(s): ${transactionIds.join(', ')}. You can collect your books at 23 Jorissen street, Braamfontein.`);
+    window.location.href = 'user_bought_books.html'; // Redirect to bought books page
+}
+
+        // Add event listener for form submission
+        document.getElementById('checkout-form').addEventListener('submit', (event) => {
+            event.preventDefault(); // Prevent form from refreshing the page
+            const userId = localStorage.getItem('userId');
+            if (userId) {
+                processCheckout(userId);
+            }
+        });
+    </script>
+</head>
+<body>
+
+    <header>
+        <h1>Checkout</h1>
+        <a href="user_cart.html">Back to cart</a>
+    </header>
+
+    <div class="container">
+        <!-- Display cart summary -->
+        <div id="cart-summary"></div>
+
+        <!-- Payment details form -->
+        <form id="checkout-form">
+            <h2>Payment Details</h2>
+            <label for="name">Name on Card:</label>
+            <input type="text" id="name" required>
+            <br>
+
+            <label for="card-number">Card Number:</label>
+            <input type="text" id="card-number" required pattern="\d{16}" maxlength="16" placeholder="XXXX XXXX XXXX XXXX">
+            <br>
+
+            <label for="expiration">Expiration Date (MM/YY):</label>
+            <input type="text" id="expiration" required pattern="\d{2}/\d{2}" maxlength="5" placeholder="MM/YY">
+            <br>
+
+            <label for="cvv">CVV:</label>
+            <input type="text" id="cvv" required pattern="\d{3}" maxlength="3" placeholder="XXX">
+            <br><br>
+            <button type="submit">Complete Purchase</button>
+        </form>
+    </div>
+
+</body>
+</html>

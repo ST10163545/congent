@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <link rel="stylesheet" href="styles3.css">
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js';
+        import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js';
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDVi8qTXuTrefxA7-DrwcefJVzjpBUVGvY",
+            authDomain: "library-189c4.firebaseapp.com",
+            projectId: "library-189c4",
+            storageBucket: "library-189c4.appspot.com",
+            messagingSenderId: "33646061345",
+            appId: "1:33646061345:web:e5532c3f3d02006c7c0060",
+            measurementId: "G-8LV0Y2D39Z"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const firestore = getFirestore(app);
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = auth.currentUser;
+
+            if (user) {
+                // Load stats and user data if logged in
+                loadStats();
+            } else {
+                // Redirect to login page if not logged in
+                window.location.href = 'user_login.html';
+            }
+        });
+
+        async function loadStats() {
+            const totalBooksElem = document.getElementById('totalBooks');
+            const totalReservationsElem = document.getElementById('totalReservations');
+            const totalTransactionsElem = document.getElementById('totalTransactions');
+
+            try {
+                const booksSnapshot = await getDocs(collection(firestore, 'Books'));
+                totalBooksElem.textContent = booksSnapshot.size;
+
+                const reservationsSnapshot = await getDocs(collection(firestore, 'Reservations'));
+                totalReservationsElem.textContent = reservationsSnapshot.size;
+
+                const transactionsSnapshot = await getDocs(collection(firestore, 'Transactions'));
+                totalTransactionsElem.textContent = transactionsSnapshot.size;
+            } catch (error) {
+                console.error('Error loading stats: ', error);
+            }
+        }
+    </script>
+</head>
+<body>
+    <header>
+        <h1>Home</h1>
+    </header>
+
+    <nav>
+        <a href="home.html">Home</a>
+        <a href="user_catalogue.html">Catalogue</a>
+        <a href="user_about_us.html">About Us</a>
+        <a href="user_account.html">My Account</a>
+        <a href="user_logout.html">Logout</a>
+    </nav>
+
+    <div class="container">
+        <h2>Dashboard</h2>
+        <div class="statistics">
+            <h3>Total Books: <span id="totalBooks">Loading...</span></h3>
+            <h3>Total Reservations: <span id="totalReservations">Loading...</span></h3>
+            <h3>Total Transactions: <span id="totalTransactions">Loading...</span></h3>
+        </div>
+    </div>
+</body>
+</html>

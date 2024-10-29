@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Register</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <a href="home.html" class="home-link">Home Page</a> <!-- Consistent styling for the home page link -->
+    </header>
+    <div class="form-container"> <!-- Using the same container class for styling consistency -->
+        <h1>Register Admin</h1>
+        <form id="register-form">
+            <input type="text" id="name" placeholder="Name" required><br>
+            <input type="text" id="surname" placeholder="Surname" required><br>
+            <input type="text" id="username" placeholder="Username" required><br>
+            <input type="email" id="email" placeholder="Email" required><br>
+            <input type="password" id="password" placeholder="Password" required><br>
+            <input type="password" id="confirm-password" placeholder="Confirm Password" required><br>
+            <button type="submit">Register</button>
+        </form>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js';
+        import { getFirestore, collection, addDoc, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js';
+        import { getAuth, createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js';
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDVi8qTXuTrefxA7-DrwcefJVzjpBUVGvY",
+            authDomain: "library-189c4.firebaseapp.com",
+            projectId: "library-189c4",
+            storageBucket: "library-189c4.appspot.com",
+            messagingSenderId: "33646061345",
+            appId: "1:33646061345:web:e5532c3f3d02006c7c0060",
+            measurementId: "G-8LV0Y2D39Z"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        const registerForm = document.getElementById('register-form');
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('name').value;
+            const surname = document.getElementById('surname').value;
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+
+            if (password !== confirmPassword) {
+                alert('Passwords do not match.');
+                return;
+            }
+
+            try {
+                // Check if the username is already taken
+                const usersCollection = collection(db, 'Users');
+                const usernameQuery = await getDocs(query(usersCollection, where('username', '==', username)));
+                if (!usernameQuery.empty) {
+                    alert('Username is already taken. Please choose a different one.');
+                    return;
+                }
+
+                // Register user in Firebase Authentication
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+
+                // Add admin user to Firestore
+                await addDoc(usersCollection, {
+                    name,
+                    surname,
+                    username,
+                    email,
+                    role: 'admin', // Assign admin role
+                    uid: userCredential.user.uid // Save the Firebase user ID
+                });
+
+                alert('Admin registered successfully.');
+
+                // Redirect to admin login page after registration
+                window.location.href = 'admin_login.html';
+            } catch (error) {
+                console.error('Error registering admin: ', error);
+                alert('Failed to register admin. Please try again.');
+            }
+        });
+    </script>
+</body>
+</html>

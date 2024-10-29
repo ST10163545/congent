@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Details</title>
+    <link rel="stylesheet" href="styles3.css">
+    <style>
+        .book-details {
+            margin: 20px;
+            display: flex;
+        }
+        .book-image {
+            width: 300px;
+            height: 400px;
+            object-fit: cover;
+        }
+        .book-info {
+            margin-left: 20px;
+        }
+        .book-info p {
+            margin: 5px 0;
+        }
+    </style>
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js';
+        import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDVi8qTXuTrefxA7-DrwcefJVzjpBUVGvY",
+            authDomain: "library-189c4.firebaseapp.com",
+            projectId: "library-189c4",
+            storageBucket: "library-189c4.appspot.com",
+            messagingSenderId: "33646061345",
+            appId: "1:33646061345:web:e5532c3f3d02006c7c0060",
+            measurementId: "G-8LV0Y2D39Z"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const firestore = getFirestore(app);
+
+        async function loadBookDetails() {
+            const params = new URLSearchParams(window.location.search);
+            const bookId = params.get('id');
+
+            if (!bookId) {
+                document.getElementById('bookDetails').innerHTML = '<p>Book not found.</p>';
+                return;
+            }
+
+            try {
+                const bookDoc = await getDoc(doc(firestore, 'Books', bookId));
+                if (bookDoc.exists()) {
+                    const book = bookDoc.data();
+                    document.getElementById('bookTitle').textContent = book.title;
+                    document.getElementById('bookAuthor').textContent = `Author: ${book.author}`;
+                    document.getElementById('bookGenres').textContent = `Genres: ${book.genres.join(', ')}`;
+                    document.getElementById('bookISBN').textContent = `ISBN: ${book.ISBN}`;
+                    document.getElementById('bookAvailable').textContent = `Available Copies: ${book.available}`;
+                    document.getElementById('bookPrice').textContent = `Price: R${book.price}`;
+                    document.getElementById('bookImage').src = book.imageUrl;
+                } else {
+                    document.getElementById('bookDetails').innerHTML = '<p>Book not found.</p>';
+                }
+            } catch (error) {
+                console.error('Error fetching book details:', error);
+                document.getElementById('bookDetails').innerHTML = '<p>Error loading book details.</p>';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadBookDetails);
+    </script>
+</head>
+<body>
+    <header>
+		<img src="pictures/Logo.png" alt="Logo" style="width: 100px; height: auto;" class="logo">
+		<div style="margin-left: 15px;">
+            <h2 style="margin: 0; font-size: 1.5rem; color: #333;">Light of Literacy</h2>
+            <p style="margin: 0; font-size: 0.9rem; color: #666;">Illuminating the path to knowledge</p>
+        </div>
+        <h1>Book Details</h1>
+    </header>
+<div class="container">
+    <div id="bookDetails" class="book-details">
+        <img id="bookImage" class="book-image" alt="Book Cover">
+        <div class="book-info">
+            <h2 id="bookTitle"></h2>
+            <p id="bookAuthor"></p>
+            <p id="bookGenres"></p>
+            <p id="bookISBN"></p>
+            <p id="bookAvailable"></p>
+            <p id="bookPrice"></p>
+        </div>
+    </div>
+</div>
+    <footer>
+        
+        <div class="footer-details">
+            <p>&copy; 2024 MN Designs. All rights reserved.</p>
+            <p>
+            <a href="https://www.google.com/maps/place/23+Jorissen+Street,+Braamfontein" target="_blank">23 Jorissen street, Braaamfontein</a> |
+            <a href="tel:+27641057114">Phone: +2764 105 7114</a> |
+            <a href="mailto:contact@library.com">Email: contact@library.com</a>
+        </p>
+        </div>
+    </footer>
+</body>
+</html>

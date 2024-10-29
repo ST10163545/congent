@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Transactions</title>
+    <link rel="stylesheet" href="styles3.css">
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        .search-container {
+            margin-bottom: 20px;
+        }
+        .search-container input {
+            padding: 8px;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <img src="pictures/Logo.png" alt="Logo" style="width: 100px; height: auto;" class="logo">
+            <div style="margin-left: 15px;">
+                <h2 style="margin: 0; font-size: 1.5rem; color: #333;">Light of Literacy</h2>
+                <p style="margin: 0; font-size: 0.9rem; color: #666;">Illuminating the path to knowledge</p>
+            </div>
+            <h1>Manage Transactions</h1>
+        </header>
+        
+        <nav>
+            <ul>
+                <a href="admin_dashboard.html">Dashboard</a>
+                <a href="manage_books.html">Manage Books</a>
+                <a href="manage_users.html">Manage Users</a>
+                <a href="manage_transactions.html">Manage Transactions</a>
+                <a href="manage_reservations.html">Manage Reservations</a>
+                <a href="admin_messages.html">View Messages</a>
+                <a href="admin_logs.html">Logs</a>
+                <a href="admin_login.html">Logout</a>
+            </ul>
+        </nav>
+
+        <h2>Transaction List</h2>
+
+        <div class="search-container">
+            <input type="text" id="search-all" placeholder="Search transactions...">
+            <button id="search-btn">Search</button>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Transaction ID</th>
+                    <th>Username</th>
+                    <th>Book Title</th>
+                    <th>Purchase Date</th>
+                    <th>Collected</th>
+                </tr>
+            </thead>
+            <tbody id="transaction-list"></tbody>
+        </table>
+
+        <a href="admin_dashboard.html">Back to Dashboard</a>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js';
+        import { getFirestore, collection, getDocs, doc, getDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDVi8qTXuTrefxA7-DrwcefJVzjpBUVGvY",
+            authDomain: "library-189c4.firebaseapp.com",
+            projectId: "library-189c4",
+            storageBucket: "library-189c4.appspot.com",
+            messagingSenderId: "33646061345",
+            appId: "1:33646061345:web:e5532c3f3d02006c7c0060",
+            measurementId: "G-8LV0Y2D39Z"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Load and display all transactions
+        async function loadTransactions(searchQuery = "") {
+            const boughtBooksSnapshot = await getDocs(collection(db, 'user_bought_books'));
+            const transactionList = document.getElementById('transaction-list');
+            transactionList.innerHTML = '';
+
+            if (boughtBooksSnapshot.empty) {
+                transactionList.innerHTML = '<tr><td colspan="5">No transactions found.</td></tr>';
+                return;
+            }
+
+            for (const docSnapshot of boughtBooksSnapshot.docs) {
+                const transaction = docSnapshot.data();
+
+                // Fetch user and book details by their IDs
+                const userDoc = await getDoc(doc(db, 'users', transaction.userId));
+                const bookDoc = await getDoc(doc(db, 'Books', transaction.bookId));
+
+                const username = userDoc.exists() ? userDoc.data().username : "Unknown User";
+                const bookTitle = bookDoc.exists() ? bookDoc.data().title : "Unknown Book";
+                const purchaseDate = new Date(transaction.purchaseDate).toLocaleDateString();
+                const collectedStatus = transaction.collected || false;
+
+                // Convert all fields to lowercase strings for easy searching
+                const transactionIdStr = docSnapshot.id.toLowerCase();
+                const usernameStr = username.toLowerCase();
+                const bookTitleStr = bookTitle.toLowerCase();
+                const purchaseDateStr = purchaseDate.toLowerCase();
+
+                // Combine all fields into one searchable string
+                const combinedData = `${transactionIdStr} ${usernameStr} ${bookTitleStr} ${purchaseDateStr}`;
+
+                // Check if the search query matches any part of the combined data
+                if (combinedData.includes(searchQuery.toLowerCase()) || searchQuery === "") {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${docSnapshot.id}</td>
+                        <td>${username}</td>
+                        <td>${bookTitle}</td>
+                        <td>${purchaseDate}</td>
+                        <td>
+                            <input type="checkbox" ${collectedStatus ? "checked" : ""} 
+                                data-id="${docSnapshot.id}" class="collected-checkbox">
+                        </td>
+                    `;
+                    transactionList.appendChild(tr);
+                }
+            }
+
+            // Add event listeners to all checkboxes
+            document.querySelectorAll('.collected-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', async (event) => {
+                    const transactionId = event.target.getAttribute('data-id');
+                    const isCollected = event.target.checked;
+
+                    // Update the collected status in Firestore
+                    const transactionRef = doc(db, 'user_bought_books', transactionId);
+                    await updateDoc(transactionRef, { collected: isCollected });
+                });
+            });
+        }
+
+        // Event listener for the search button
+        document.getElementById('search-btn').addEventListener('click', () => {
+            const searchQuery = document.getElementById('search-all').value;
+            loadTransactions(searchQuery);
+        });
+
+        // Load all transactions when the page loads
+        loadTransactions();
+    </script>
+</body>
+</html>

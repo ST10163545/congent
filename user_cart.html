@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cart</title>
+    <link rel="stylesheet" href="styles3.css">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js';
+        import { getFirestore, doc, getDoc, updateDoc, setDoc, collection, addDoc } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDVi8qTXuTrefxA7-DrwcefJVzjpBUVGvY",
+            authDomain: "library-189c4.firebaseapp.com",
+            projectId: "library-189c4",
+            storageBucket: "library-189c4.appspot.com",
+            messagingSenderId: "33646061345",
+            appId: "1:33646061345:web:e5532c3f3d02006c7c0060",
+            measurementId: "G-8LV0Y2D39Z"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const firestore = getFirestore(app);
+        const auth = getAuth(app);
+
+        window.addEventListener('DOMContentLoaded', () => {
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    const userId = user.uid;
+                    localStorage.setItem('userId', userId);
+                    displayCart(userId);
+                } else {
+                    localStorage.removeItem('userId');
+                    alert('Please log in to view your cart.');
+                    window.location.href = 'login.html';
+                }
+            });
+        });
+
+        async function getBookDetails(bookId) {
+            if (typeof bookId !== 'string') {
+                console.error('Invalid bookId:', bookId);
+                return null;
+            }
+            const bookRef = doc(firestore, 'Books', bookId);
+            const bookDoc = await getDoc(bookRef);
+            return bookDoc.exists() ? bookDoc.data() : null;
+        }
+
+        async function displayCart(userId) {
+            const cartRef = doc(firestore, 'carts', userId);
+            try {
+                const cartDoc = await getDoc(cartRef);
+                if (!cartDoc.exists()) {
+                    await setDoc(cartRef, { borrow: [], buy: [] });
+                }
+                const cart = (await getDoc(cartRef)).data();
+                displayCartContent(cart);
+            } catch (error) {
+                console.error('Error retrieving cart:', error);
+            }
+        }
+
+        async function displayCartContent(cart) {
+            const borrowList = document.getElementById('borrow-list');
+            const buyList = document.getElementById('buy-list');
+
+            // Borrow section
+            borrowList.innerHTML = cart.borrow.length ? await Promise.all(cart.borrow.map(async (bookId) => {
+                const book = await getBookDetails(bookId);
+                if (book) {
+                    return `
+                        <li>
+                            <img src="${book.imageUrl}" alt="${book.title}" style="width: 100px; height: 150px;" />
+                            <h4>${book.title}</h4>
+                            <input type="date" id="date-${bookId}" required>
+                            <button onclick="reserveBook('${bookId}', '${book.title}')">Reserve</button>
+                            <button onclick="removeBookFromCart('${bookId}', 'borrow')">Remove</button>
+                        </li>
+                    `;
+                }
+                return '';
+            })).then(html => html.join('')) : '<li>No borrowed books in cart.</li>';
+
+            // Buy section
+            buyList.innerHTML = cart.buy.length ? await Promise.all(cart.buy.map(async (book) => {
+                const bookDetails = await getBookDetails(book.id);
+                if (bookDetails) {
+                    return `
+                        <li>
+                            <img src="${bookDetails.imageUrl}" alt="${bookDetails.title}" style="width: 100px; height: 150px;" />
+                            <h4>${bookDetails.title}</h4>
+                            Price: R${book.price}
+                            <button onclick="removeBookFromCart('${book.id}', 'buy')">  Remove</button>
+                        </li>
+                    `;
+                }
+                return '';
+            })).then(html => html.join('')) : '<li>No books to buy in cart.</li>';
+
+            // Add checkout button if there are books to buy
+            if (cart.buy.length) {
+                const totalPrice = cart.buy.reduce((sum, book) => sum + book.price, 0);
+                const checkoutButton = document.createElement('button');
+                checkoutButton.innerText = `Checkout (R${totalPrice}  )`;
+                checkoutButton.onclick = () => handleCheckout(cart.buy);
+                buyList.appendChild(checkoutButton);
+            }
+        }
+
+        async function handleCheckout(buyBooks) {
+            localStorage.setItem('cart', JSON.stringify({ buy: buyBooks }));
+            window.location.href = 'checkout.html'; // Redirect to checkout page
+        }
+
+        window.reserveBook = async function(bookId, bookTitle) {
+            const reservationDate = document.getElementById(`date-${bookId}`).value;
+            if (!reservationDate) {
+                alert('Please select a reservation date.');
+                return;
+            }
+
+            const userId = localStorage.getItem('userId');
+            const cartRef = doc(firestore, 'carts', userId);
+            try {
+				const userDoc = await getDoc(doc(firestore, 'users', userId)); // Assuming usernames are stored in the 'users' collection
+				const username = userDoc.exists() ? userDoc.data().username : 'Unknown User'; // Fetch username, default to 'Unknown User' if not found
+
+                const cartDoc = await getDoc(cartRef);
+                if (cartDoc.exists()) {
+                    const cart = cartDoc.data();
+                    if (cart.borrow.includes(bookId)) {
+                        await addDoc(collection(firestore, 'user_reserved_books'), {
+                            userId,
+							username,
+                            bookId,
+                            title: bookTitle, // Ensure the book title is stored
+                            reservationDate
+                        });
+                        cart.borrow = cart.borrow.filter(book => book !== bookId);
+                        await updateDoc(cartRef, { borrow: cart.borrow });
+                        displayCart(userId);
+                        alert(`Book "${bookTitle}" reserved for ${reservationDate}.`);
+                    } else {
+                        alert('Book not found in the cart.');
+                    }
+                } else {
+                    alert('Cart not found.');
+                }
+            } catch (error) {
+                console.error('Error reserving book:', error);
+            }
+        };
+
+        window.removeBookFromCart = async function(bookId, type) {
+            const userId = localStorage.getItem('userId');
+            const cartRef = doc(firestore, 'carts', userId);
+            try {
+                const cartDoc = await getDoc(cartRef);
+                if (cartDoc.exists()) {
+                    const cart = cartDoc.data();
+                    if (type === 'borrow') {
+                        cart.borrow = cart.borrow.filter(book => book !== bookId);
+                    } else if (type === 'buy') {
+                        cart.buy = cart.buy.filter(book => book.id !== bookId);
+                    }
+                    await updateDoc(cartRef, cart);
+                    displayCart(userId);
+                    alert(`Book removed from ${type} section.`);
+                } else {
+                    alert('Cart not found.');
+                }
+            } catch (error) {
+                console.error('Error removing book from cart:', error);
+            }
+        };
+
+        // Function to switch between borrow and buy views
+        window.switchCartView = function(view) {
+            const borrowList = document.getElementById('borrow-list');
+            const buyList = document.getElementById('buy-list');
+            const borrowSection = document.getElementById('borrow-section');
+            const buySection = document.getElementById('buy-section');
+
+            if (view === 'borrow') {
+                borrowSection.style.display = 'block';
+                buySection.style.display = 'none';
+            } else {
+                borrowSection.style.display = 'none';
+                buySection.style.display = 'block';
+            }
+        };
+    </script>
+	<style>
+        
+        
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .cart-view-switch {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+        }
+
+        .cart-view-switch button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007BFF;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .cart-view-switch button:hover {
+            background-color: #0056b3;
+        }
+
+        h2 {
+            margin: 15px 0;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #eaeaea;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            background: #f9f9f9;
+        }
+
+        li img {
+            margin-right: 15px;
+            border-radius: 5px;
+        }
+
+        li h4 {
+            flex-grow: 1;
+            margin: 0;
+        }
+
+        button {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 5px;
+            background-color: #dc3545;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #c82333;
+        }
+
+        input[type="date"] {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="pictures/Logo.png" alt="Logo" style="width: 100px; height: auto;" class="logo">
+		<div style="margin-left: 15px;">
+            <h2 style="margin: 0; font-size: 1.5rem; color: #333;">Light of Literacy</h2>
+            <p style="margin: 0; font-size: 0.9rem; color: #666;">Illuminating the path to knowledge</p>
+        </div>
+		<h1>Cart</h1>
+		<div class="header-links"> 
+			<a href="user_cart.html" class="icon-link">
+			<i class="fas fa-shopping-cart"></i> <span>Cart</span>
+			</a>
+			<a href="user_favorites.html" class="icon-link">
+			<i class="fas fa-heart"></i> <span>Favorites</span>
+			</a>
+		</div>
+    </header>
+
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="user_catalogue.html">Catalogue</a>
+        <a href="user_about_us.html">About Us</a>
+        <a href="contact_us.html">Contact Us</a>
+        <a href="user_account.html">My Account</a>
+        
+    </nav>
+
+    <div class="container">
+        <div class="cart-view-switch">
+            <button onclick="switchCartView('borrow')">Borrow Books</button>
+            <button onclick="switchCartView('buy')">Buy Books</button>
+        </div>
+
+        <div id="borrow-section">
+            <h2>Borrow Books</h2>
+            <ul id="borrow-list"></ul>
+        </div>
+
+        <div id="buy-section" style="display:none;">
+            <h2>Buy Books</h2>
+            <ul id="buy-list"></ul>
+        </div>
+    </div>
+</body>
+</html>

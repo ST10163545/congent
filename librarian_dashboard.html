@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Librarian Dashboard</title>
+    <link rel="stylesheet" href="styles3.css">
+    <style>
+        .dashboard {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px;
+        }
+        .card {
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 5px;
+            text-align: center;
+            width: 30%;
+        }
+		.dashboard-container {
+            max-width: 1200px;
+            margin: auto;
+            padding: 20px;
+        }
+        .statistics {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            width: 200px;
+        }
+        .admin-links {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 20px;
+        }
+        .admin-links a {
+            padding: 10px;
+            text-decoration: none;
+            color: #007BFF;
+            border: 1px solid #007BFF;
+            border-radius: 5px;
+            margin: 5px 0;
+            text-align: center;
+        }
+        .admin-links a:hover {
+            background-color: #007BFF;
+            color: white;
+        }
+        #logout {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+<header>
+        <img src="pictures/Logo.png" alt="Logo" style="width: 100px; height: auto;" class="logo">
+		<div style="margin-left: 15px;">
+            <h2 style="margin: 0; font-size: 1.5rem; color: #333;">Light of Literacy</h2>
+            <p style="margin: 0; font-size: 0.9rem; color: #666;">Illuminating the path to knowledge</p>
+        </div>
+		<h1>Librarian Dashboard</h1>
+		
+    </header>
+    
+	
+    <nav>
+        <ul>
+            <a href="librarian_dashboard.html">Dashboard</a>
+			<a href="manage_books_librarian.html">Manage Books</a>
+			<a href="manage_users_librarian.html">Manage Users</a>
+            <a href="manage_reservations_librarian.html">Manage Reservations</a>
+            <a href="manage_transactions_librarian.html">Manage Transactions</a>
+			<a href="librarian_messages.html">View Messages</a>
+			<a href="librarian_logout.html">Logout</a>
+        </ul>
+    </nav>
+	
+    <div class="dashboard">
+        <div class="card">
+            <h2>Total Books</h2>
+            <p id="totalBooks">Loading...</p>
+        </div>
+        <div class="card">
+            <h2>Total Reservations</h2>
+            <p id="totalReservations">Loading...</p>
+        </div>
+        <div class="card">
+            <h2>Total Transactions</h2>
+            <p id="totalTransactions">Loading...</p>
+        </div>
+    </div>
+
+    <div class="admin-links">
+        <a href="manage_books_librarian.html">Manage Books</a>
+		<a href="manage_users_librarian.html">Manage Users</a>
+        <a href="manage_reservations_librarian.html">Manage Reservations</a>
+		<a href="librarian_messages.html">View Messages</a>
+        <a href="manage_transactions_librarian.html">Manage Transactions</a>
+		<a href="librarian_logout.html">Logout</a>
+    </div>
+
+    <a href="librarian_logout.html">Logout</a>
+</div>
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js';
+        import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDVi8qTXuTrefxA7-DrwcefJVzjpBUVGvY",
+            authDomain: "library-189c4.firebaseapp.com",
+            projectId: "library-189c4",
+            storageBucket: "library-189c4.appspot.com",
+            messagingSenderId: "33646061345",
+            appId: "1:33646061345:web:e5532c3f3d02006c7c0060",
+            measurementId: "G-8LV0Y2D39Z"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const totalBooksElem = document.getElementById('totalBooks');
+        const totalReservationsElem = document.getElementById('totalReservations');
+        const totalTransactionsElem = document.getElementById('totalTransactions');
+
+        async function loadStats() {
+            const booksSnapshot = await getDocs(collection(db, 'Books'));
+            totalBooksElem.textContent = booksSnapshot.size;
+
+            const reservationsSnapshot = await getDocs(collection(db, 'user_reserved_books'));
+            totalReservationsElem.textContent = reservationsSnapshot.size;
+
+            const transactionsSnapshot = await getDocs(collection(db, 'user_bought_books'));
+            totalTransactionsElem.textContent = transactionsSnapshot.size;
+        }
+
+        loadStats();
+    </script>
+</body>
+</html>

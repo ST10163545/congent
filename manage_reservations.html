@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Reservations</title>
+    <link rel="stylesheet" href="styles3.css">
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        .search-container {
+            margin-bottom: 20px;
+        }
+        .search-container input {
+            padding: 8px;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .return-date-container {
+            display: flex;
+            align-items: center;
+        }
+        .return-date-container input {
+            margin-left: 10px;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+	<header>
+        <img src="pictures/Logo.png" alt="Logo" style="width: 100px; height: auto;" class="logo">
+		<div style="margin-left: 15px;">
+            <h2 style="margin: 0; font-size: 1.5rem; color: #333;">Light of Literacy</h2>
+            <p style="margin: 0; font-size: 0.9rem; color: #666;">Illuminating the path to knowledge</p>
+        </div>
+		<h1>Manage Reservations</h1>
+		
+    </header>
+        
+        <nav>
+            <ul>
+                <a href="admin_dashboard.html">Dashboard</a>
+                <a href="manage_books.html">Manage Books</a>
+                <a href="manage_users.html">Manage Users</a>
+                <a href="manage_transactions.html">Manage Transactions</a>
+                <a href="manage_reservations.html">Manage Reservations</a>
+				<a href="admin_messages.html">View Messages</a>
+				<a href="admin_logs.html">Logs</a>
+                <a href="admin_login.html">Logout</a>
+            </ul>
+        </nav>
+
+        <h2>Reservation List</h2>
+
+        <!-- Search Bar -->
+        <div class="search-container">
+            <input type="text" id="search-all" placeholder="Search...">
+            <button id="search-btn">Search</button>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Reservation ID</th>
+                    <th>User ID</th>
+                    <th>Username</th>
+                    <th>Book ID</th>
+                    <th>Book Title</th>
+                    <th>Date Issued</th>
+                    <th>Due Date</th>
+                    <th>Return Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="reservation-list"></tbody>
+        </table>
+
+        <a href="admin_dashboard.html">Back to Dashboard</a>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js';
+        import { getFirestore, collection, getDocs, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDVi8qTXuTrefxA7-DrwcefJVzjpBUVGvY",
+            authDomain: "library-189c4.firebaseapp.com",
+            projectId: "library-189c4",
+            storageBucket: "library-189c4.appspot.com",
+            messagingSenderId: "33646061345",
+            appId: "1:33646061345:web:e5532c3f3d02006c7c0060",
+            measurementId: "G-8LV0Y2D39Z"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Load and display reservations
+        async function loadReservations(searchQuery = "") {
+            const reservedBooksSnapshot = await getDocs(collection(db, 'user_reserved_books'));
+            const reservationList = document.getElementById('reservation-list');
+            reservationList.innerHTML = '';
+
+            if (reservedBooksSnapshot.empty) {
+                reservationList.innerHTML = '<tr><td colspan="9">No reservations found.</td></tr>';
+                return;
+            }
+
+            for (const docSnapshot of reservedBooksSnapshot.docs) {
+                const reservation = docSnapshot.data();
+
+                // Fetch user document
+                const userRef = doc(db, 'users', reservation.userId);
+                const userDoc = await getDoc(userRef);
+                const username = userDoc.exists() ? userDoc.data().username : 'N/A';
+
+                // Fetch book document
+                const bookRef = doc(db, 'Books', reservation.bookId);
+                const bookDoc = await getDoc(bookRef);
+                const bookTitle = bookDoc.exists() ? bookDoc.data().title : 'N/A';
+
+                // Calculate due date (2 weeks from reservation date)
+                const reservedDate = new Date(reservation.reservationDate);
+                const dueDate = new Date(reservedDate);
+                dueDate.setDate(dueDate.getDate() + 14);
+
+                // Check if return date exists
+                const returnDate = reservation.returnDate ? new Date(reservation.returnDate).toLocaleDateString() : 'Not returned';
+
+                // Create return date input
+                const returnDateInput = `<input type="date" id="return-date-${docSnapshot.id}" />`;
+                const returnButton = `<button onclick="returnBook('${docSnapshot.id}')">Return</button>`;
+
+                // Filter by search query across all fields
+                const combinedData = `${docSnapshot.id} ${reservation.userId} ${username} ${reservation.bookId} ${bookTitle} ${reservedDate.toLocaleDateString()} ${dueDate.toLocaleDateString()}`;
+
+                if (combinedData.includes(searchQuery.toLowerCase()) || searchQuery === "") {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${docSnapshot.id}</td>
+                        <td>${reservation.userId}</td>
+                        <td>${username}</td>
+                        <td>${reservation.bookId}</td>
+                        <td>${bookTitle}</td>
+                        <td>${reservedDate.toLocaleDateString()}</td>
+                        <td>${dueDate.toLocaleDateString()}</td>
+                        <td>${returnDate}</td>
+                        <td class="return-date-container">${returnDateInput} ${returnButton}</td>
+                    `;
+                    reservationList.appendChild(tr);
+                }
+            }
+        }
+
+        // Function to handle returning a book
+        window.returnBook = async function(reservationId) {
+            const returnDate = document.getElementById(`return-date-${reservationId}`).value;
+            if (!returnDate) {
+                alert('Please select a return date.');
+                return;
+            }
+
+            const reservationRef = doc(db, 'user_reserved_books', reservationId);
+            try {
+                await setDoc(reservationRef, { returnDate: returnDate }, { merge: true });
+                alert('Return date updated successfully!');
+                loadReservations(); // Refresh the list
+            } catch (error) {
+                console.error('Error updating return date:', error);
+                alert('There was an error updating the return date. Please try again.');
+            }
+        }
+
+        // Event listener for search button
+        document.getElementById('search-btn').addEventListener('click', () => {
+            const searchQuery = document.getElementById('search-all').value;
+            loadReservations(searchQuery);
+        });
+
+        // Load reservations when the page loads
+        loadReservations();
+    </script>
+</body>
+</html>

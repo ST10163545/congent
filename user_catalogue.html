@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catalogue</title>
+    <link rel="stylesheet" href="styles3.css">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js';
+        import { getFirestore, collection, getDocs, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js';
+        import { getAuth } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDVi8qTXuTrefxA7-DrwcefJVzjpBUVGvY",
+            authDomain: "library-189c4.firebaseapp.com",
+            projectId: "library-189c4",
+            storageBucket: "library-189c4.appspot.com",
+            messagingSenderId: "33646061345",
+            appId: "1:33646061345:web:e5532c3f3d02006c7c0060",
+            measurementId: "G-8LV0Y2D39Z"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const firestore = getFirestore(app);
+        const auth = getAuth(app);
+
+        window.updateCart = async function (bookId, type, bookTitle, bookPrice) {
+            const user = auth.currentUser;
+            if (!user) {
+                alert('User not logged in. Redirecting to login.');
+                window.location.href = 'login.html';
+                return;
+            }
+            const userId = user.uid;
+            const cartRef = doc(firestore, 'carts', userId);
+
+            try {
+                const cartDoc = await getDoc(cartRef);
+                let cart = { borrow: [], buy: [] };
+
+                if (cartDoc.exists()) {
+                    cart = cartDoc.data();
+                }
+
+                if (type === 'borrow') {
+                    if (!cart.borrow.includes(bookId)) {
+                        cart.borrow.push(bookId);
+                    }
+                } else if (type === 'buy') {
+                    if (!cart.buy.some(item => item.id === bookId)) {
+                        cart.buy.push({ id: bookId, price: bookPrice });
+                    }
+                }
+
+                await setDoc(cartRef, cart);
+                alert(`Book "${bookTitle}" added to ${type} cart.`);
+            } catch (error) {
+                console.error('Error updating cart:', error);
+                alert('There was an error updating your cart. Please try again.');
+            }
+        }
+
+        window.addToFavorites = async function (bookId, bookTitle) {
+            const user = auth.currentUser;
+            if (!user) {
+                alert('User not logged in. Redirecting to login.');
+                window.location.href = 'login.html';
+                return;
+            }
+            const userId = user.uid;
+            const favoritesRef = doc(firestore, 'favorites', userId);
+
+            try {
+                const favoritesDoc = await getDoc(favoritesRef);
+                let favorites = { books: [] };
+
+                if (favoritesDoc.exists()) {
+                    favorites = favoritesDoc.data();
+                }
+
+                if (!favorites.books.includes(bookId)) {
+                    favorites.books.push(bookId);
+                    await setDoc(favoritesRef, favorites);
+                    alert(`Book "${bookTitle}" added to favorites.`);
+                } else {
+                    alert(`Book "${bookTitle}" is already in favorites.`);
+                }
+            } catch (error) {
+                console.error('Error adding to favorites:', error);
+                alert('There was an error adding the book to favorites. Please try again.');
+            }
+        }
+
+        async function loadBooks(query = '') {
+            const bookList = document.getElementById('bookList');
+
+            try {
+                const booksSnapshot = await getDocs(collection(firestore, 'Books'));
+                bookList.innerHTML = ''; // Clear the list before adding new items
+
+                booksSnapshot.forEach(doc => {
+                    const book = doc.data();
+                    const bookId = doc.id;
+
+                    // Check if the book title or author includes the search query
+                    if (book.title.toLowerCase().includes(query.toLowerCase()) ||
+                        book.author.toLowerCase().includes(query.toLowerCase())) {
+                        const bookElement = document.createElement('div');
+                        bookElement.classList.add('book-container');
+                        bookElement.innerHTML = `
+                            <img src="${book.imageUrl}" alt="${book.title}" class="book-image">
+                            <div class="book-details">
+                                <h3>${book.title}</h3>
+                                <p>Author: ${book.author}</p>
+                                <p>Price: R${book.price}</p>
+                                <button onclick="updateCart('${bookId}', 'borrow', '${book.title}', ${book.price})">Borrow</button>
+                                <button onclick="updateCart('${bookId}', 'buy', '${book.title}', ${book.price})">Buy</button>
+                                <button onclick="addToFavorites('${bookId}', '${book.title}')">Add to Favorites</button>
+                            </div>
+                        `;
+                        bookList.appendChild(bookElement);
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading books:', error);
+                alert('There was an error loading the book list. Please try again later.');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadBooks();
+
+            // Search functionality
+            document.getElementById('searchInput').addEventListener('input', (event) => {
+                const query = event.target.value;
+                loadBooks(query); // Load books based on the search query (title or author)
+            });
+        });
+    </script>
+	<style>
+	.container {
+    padding: 20px;
+}
+
+.book-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.book-container {
+    border: 1px solid #ccc;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    background-color: #f9f9f9;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.book-image {
+        width: 150px; /* Set a fixed width */
+        height: 200px; /* Set a fixed height */
+        object-fit: cover; /* Ensures the image covers the area without distortion */
+        border-radius: 5px; /* Optional: adds rounded corners */
+    }
+
+.book-details h3 {
+    margin: 10px 0 5px;
+    font-size: 18px;
+    color: #333;
+}
+
+.book-details p {
+    margin: 5px 0;
+    color: #666;
+}
+
+.book-container button {
+    margin-top: 10px;
+    padding: 8px 15px;
+    background-color: #007bff;
+    border: none;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.book-container button:hover {
+    background-color: #0056b3;
+}
+
+	
+	</style>
+</head>
+
+<body>
+    <header>
+		<img src="pictures/Logo.png" alt="Logo" style="width: 100px; height: auto;" class="logo">
+		<div style="margin-left: 15px;">
+            <h2 style="margin: 0; font-size: 1.5rem; color: #333;">Light of Literacy</h2>
+            <p style="margin: 0; font-size: 0.9rem; color: #666;">Illuminating the path to knowledge</p>
+        </div>
+        <h1>Catalogue</h1>
+		<div class="header-links"> 
+			<a href="user_cart.html" class="icon-link">
+			<i class="fas fa-shopping-cart"></i> <span>Cart</span>
+			</a>
+			<a href="user_favorites.html" class="icon-link">
+			<i class="fas fa-heart"></i> <span>Favorites</span>
+			</a>
+		</div>
+    </header>
+
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="user_catalogue.html">Catalogue</a>
+        <a href="user_about_us.html">About Us</a>
+        <a href="contact_us.html">Contact Us</a>
+        <a href="user_account.html">My Account</a>
+        
+    </nav>
+
+    <div class="container">
+        <input type="text" id="searchInput" placeholder="Search for a book or author..." />
+        <div id="bookList" class="book-grid">
+            <!-- Book list will be populated here -->
+        </div>
+    </div>
+
+    <footer>
+        <p>
+            <a href="index.html">Home</a>
+            <a href="user_catalogue.html">Catalogue</a>
+            <a href="user_about_us.html">About Us</a>
+            <a href="contact_us.html">Contact Us</a>
+			<a href="home.html">Log off</a>
+        </p>
+        <div class="footer-details">
+            <p>&copy; 2024 MN Designs. All rights reserved.</p>
+            <p>
+            <a href="https://www.google.com/maps/place/23+Jorissen+Street,+Braamfontein" target="_blank">23 Jorissen street, Braaamfontein</a> |
+            <a href="tel:+27641057114">Phone: +2764 105 7114</a> |
+            <a href="mailto:contact@library.com">Email: contact@library.com</a>
+        </p>
+        </div>
+    </footer>
+</body>
+
+</html>

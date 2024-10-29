@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register</title>
+    <link rel="stylesheet" href="styles.css">
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js';
+        import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js';
+        import { getFirestore, setDoc, doc } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDVi8qTXuTrefxA7-DrwcefJVzjpBUVGvY",
+            authDomain: "library-189c4.firebaseapp.com",
+            projectId: "library-189c4",
+            storageBucket: "library-189c4.appspot.com",
+            messagingSenderId: "33646061345",
+            appId: "1:33646061345:web:e5532c3f3d02006c7c0060",
+            measurementId: "G-8LV0Y2D39Z"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const firestore = getFirestore(app);
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('name').value;
+            const surname = document.getElementById('surname').value;
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            // Check if passwords match
+            if (password !== confirmPassword) {
+                alert("Passwords do not match.");
+                return;
+            }
+
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                // Update the user's profile with the provided username
+                await updateProfile(user, { displayName: username });
+
+                // Save additional user data to Firestore
+                await setDoc(doc(firestore, 'users', user.uid), {
+                    uid: user.uid, // Assign user UID
+                    name: name,
+                    surname: surname,
+                    username: username,
+                    email: email,
+                    role: 'user' // Default role for registration
+                });
+
+                alert('User registered successfully');
+                window.location.href = 'login.html';
+            } catch (error) {
+                console.error('Error registering user:', error);
+                alert(`Error: ${error.message}`); // Show more user-friendly error
+            }
+        });
+    </script>
+</head>
+<body>
+    <header>
+        <a href="home.html" class="home-link">Home Page</a>
+    </header>
+
+    <div class="form-container">
+        <h1>Register</h1> <!-- Heading placed above the form -->
+        
+        <form id="registerForm">
+            <input type="text" id="name" placeholder="First Name" required><br>
+            <input type="text" id="surname" placeholder="Surname" required><br>
+            <input type="text" id="username" placeholder="Username" required><br>
+            <input type="email" id="email" placeholder="Email" required><br>
+            <input type="password" id="password" placeholder="Password" required><br>
+            <input type="password" id="confirmPassword" placeholder="Confirm Password" required><br>
+            <button type="submit">Register</button>
+        </form>
+    </div>
+</body>
+</html>

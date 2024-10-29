@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <a href="home.html" class="home-link">Home Page</a> <!-- Using the home-link class for styling -->
+    </header>
+    <div class="form-container"> <!-- Consistent container styling -->
+        <h1>Admin Login</h1>
+		<p id="error-message"></p> <!-- Placeholder for error messages -->
+        <form id="login-form">
+            <input type="text" id="username" placeholder=" Email" required><br>
+            <input type="password" id="password" placeholder="Password" required><br>
+            <button type="submit">Login</button>
+        </form>
+        
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js';
+        import { getAuth, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js';
+        import { getFirestore, collection, query, where, getDocs, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDVi8qTXuTrefxA7-DrwcefJVzjpBUVGvY",
+            authDomain: "library-189c4.firebaseapp.com",
+            projectId: "library-189c4",
+            storageBucket: "library-189c4.appspot.com",
+            messagingSenderId: "33646061345",
+            appId: "1:33646061345:web:e5532c3f3d02006c7c0060",
+            measurementId: "G-8LV0Y2D39Z"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const loginForm = document.getElementById('login-form');
+        const errorMessage = document.getElementById('error-message');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const usernameOrEmail = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                let email = usernameOrEmail;
+
+                // If the input is not an email, assume it's a username and find the corresponding email
+                if (!usernameOrEmail.includes('@')) {
+                    const usersCollection = collection(db, 'users');
+                    const usernameQuery = await getDocs(query(usersCollection, where('username', '==', usernameOrEmail)));
+                    if (usernameQuery.empty) {
+                        throw new Error('Invalid username or password');
+                    }
+
+                    email = usernameQuery.docs[0].data().email;
+                }
+
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const userId = userCredential.user.uid;
+
+                // Fetch user role
+                const userDoc = await getDoc(doc(db, 'users', userId));
+                const userData = userDoc.data();
+
+                if (userData.role === 'admin') {
+                    localStorage.setItem('adminUser', JSON.stringify(userCredential.user));
+                    window.location.href = 'admin_dashboard.html'; // Redirect to admin dashboard
+                } else {
+                    errorMessage.innerText = 'Unauthorized access! Only admins can log in here.';
+                }
+            } catch (error) {
+                errorMessage.innerText = 'Invalid username or password. Please try again.';
+            }
+        });
+    </script>
+</body>
+</html>

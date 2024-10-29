@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reserved Books</title>
+    <link rel="stylesheet" href="styles3.css">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js';
+        import { getFirestore, collection, query, where, getDocs, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDVi8qTXuTrefxA7-DrwcefJVzjpBUVGvY",
+            authDomain: "library-189c4.firebaseapp.com",
+            projectId: "library-189c4",
+            storageBucket: "library-189c4.appspot.com",
+            messagingSenderId: "33646061345",
+            appId: "1:33646061345:web:e5532c3f3d02006c7c0060",
+            measurementId: "G-8LV0Y2D39Z"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const firestore = getFirestore(app);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const userId = localStorage.getItem('userId');
+            if (!userId) {
+                alert('User not logged in.');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            displayReservedBooks(userId);
+        });
+
+        async function getBookDetails(bookId) {
+            const bookRef = doc(firestore, 'Books', bookId);
+            const bookDoc = await getDoc(bookRef);
+            return bookDoc.exists() ? bookDoc.data() : null;
+        }
+
+        async function displayReservedBooks(userId) {
+    const reservedBooksContainer = document.getElementById('reserved-books');
+    reservedBooksContainer.innerHTML = '';
+
+    try {
+        const reservedBooksQuery = query(collection(firestore, 'user_reserved_books'), where('userId', '==', userId));
+        const reservedBooksSnapshot = await getDocs(reservedBooksQuery);
+        if (reservedBooksSnapshot.empty) {
+            reservedBooksContainer.innerHTML = '<p>No reserved books found.</p>';
+        } else {
+            for (const doc of reservedBooksSnapshot.docs) {
+                const data = doc.data();
+                const bookDetails = await getBookDetails(data.bookId);
+                if (bookDetails) {
+                    const reservationDate = new Date(data.reservationDate);
+                    const dueDate = new Date(reservationDate);
+                    dueDate.setDate(dueDate.getDate() + 14); // Add 14 days to reservation date
+                    
+                    const returnDate = data.returnDate ? new Date(data.returnDate).toLocaleDateString() : 'Not returned yet';
+                    const bookContainer = document.createElement('div');
+                    bookContainer.classList.add('book-container');
+                    bookContainer.innerHTML = `
+                        <img src="${bookDetails.imageUrl}" alt="${bookDetails.title}" class="book-image" />
+                        <div class="book-info">
+                            <h4 class="book-title">${bookDetails.title}</h4>
+                            <p>Reservation Date: ${reservationDate.toLocaleDateString()}</p>
+                            <p>Due Date: ${dueDate.toLocaleDateString()}</p>
+                            <p>Return Date: ${returnDate}</p>
+                        </div>	
+                    `;
+                    reservedBooksContainer.appendChild(bookContainer);
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error fetching reserved books:', error);
+        reservedBooksContainer.innerHTML = '<p>Error fetching reserved books. Please try again later.</p>';
+    }
+}
+
+    </script>
+    <style>
+        /* Container styling */
+        .container {
+            margin: 20px;
+        }
+
+        /* Styling for each book container */
+        .book-container {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            background-color: #f9f9f9;
+        }
+
+        /* Styling for the book image */
+        .book-image {
+            width: 100px;
+            height: 150px;
+            margin-right: 20px;
+            border-radius: 5px;
+        }
+
+        /* Styling for the book title */
+        .book-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        /* General text styling */
+        p {
+            margin: 5px 0;
+        }
+
+        /* Header and subheader styling */
+        h1, h2 {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="pictures/Logo.png" alt="Logo" class="logo">
+        <div style="margin-left: 15px;">
+            <h2>Light of Literacy</h2>
+            <p>Illuminating the path to knowledge</p>
+        </div>
+		<h1>Reserved Books</h1>
+		<div class="header-links"> 
+            <a href="user_cart.html" class="icon-link">
+                <i class="fas fa-shopping-cart"></i> <span>Cart</span>
+            </a>
+            <a href="user_favorites.html" class="icon-link">
+                <i class="fas fa-heart"></i> <span>Favorites</span>
+            </a>
+        </div>
+    </header>
+
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="user_catalogue.html">Catalogue</a>
+        <a href="user_about_us.html">About Us</a>
+		<a href="contact_us.html">Contact Us</a>
+        <a href="user_account.html">My Account</a>
+        
+    </nav>
+
+    <div class="container">
+        <h2>My Reserved Books</h2>
+        <div id="reserved-books">
+            <!-- Reserved books will be listed here -->
+        </div>
+    </div>
+	<footer>
+        <p>
+            <a href="index.html">Home</a>
+            <a href="user_catalogue.html">Catalogue</a>
+            <a href="user_about_us.html">About Us</a>
+            <a href="contact_us.html">Contact Us</a>
+			<a href="home.html">Log off</a>
+        </p>
+        <div class="footer-details">
+            <p>&copy; 2024 MN Designs. All rights reserved.</p>
+            <p>
+            <a href="https://www.google.com/maps/place/23+Jorissen+Street,+Braamfontein" target="_blank">23 Jorissen street, Braaamfontein</a> |
+            <a href="tel:+27641057114">Phone: +2764 105 7114</a> |
+            <a href="mailto:contact@library.com">Email: contact@library.com</a>
+        </p>
+        </div>
+    </footer>
+</body>
+</html>

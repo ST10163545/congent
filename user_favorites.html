@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Favorites</title>
+    <link rel="stylesheet" href="styles3.css">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js';
+    import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js';
+    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js';
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyDVi8qTXuTrefxA7-DrwcefJVzjpBUVGvY",
+        authDomain: "library-189c4.firebaseapp.com",
+        projectId: "library-189c4",
+        storageBucket: "library-189c4.appspot.com",
+        messagingSenderId: "33646061345",
+        appId: "1:33646061345:web:e5532c3f3d02006c7c0060",
+        measurementId: "G-8LV0Y2D39Z"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const firestore = getFirestore(app);
+    const auth = getAuth(app);
+
+    // Update cart: Add the book for borrowing or buying
+    window.updateCart = async function(bookId, action, title, price) {
+        const user = auth.currentUser;
+        if (!user) {
+            alert('User not logged in. Redirecting to login.');
+            window.location.href = 'login.html';
+            return;
+        }
+
+        const userId = user.uid;
+        const cartRef = doc(firestore, 'carts', userId);
+
+        try {
+            const cartDoc = await getDoc(cartRef);
+            let cart = { borrow: [], buy: [] };
+
+            if (cartDoc.exists()) {
+                cart = cartDoc.data();
+            }
+
+            if (action === 'borrow') {
+                // Check if the book is already in the borrow list
+                if (!cart.borrow.includes(bookId)) {
+                    cart.borrow.push(bookId);
+                }
+            } else if (action === 'buy') {
+                // Check if the book is already in the buy list
+                const alreadyInBuyList = cart.buy.some(book => book.id === bookId);
+                if (!alreadyInBuyList) {
+                    cart.buy.push({ id: bookId, price });
+                }
+            }
+
+            // Save the updated cart in Firestore
+            await setDoc(cartRef, cart);
+            alert(`${title} has been added to your cart.`);
+        } catch (error) {
+            console.error('Error updating cart:', error);
+            alert('There was an error adding the book to your cart. Please try again.');
+        }
+    };
+
+    // Remove book from favorites
+    window.removeFromFavorites = async function(bookId) {
+        const user = auth.currentUser;
+        if (!user) {
+            alert('User not logged in. Redirecting to login.');
+            window.location.href = 'login.html';
+            return;
+        }
+        const userId = user.uid;
+        const favoritesRef = doc(firestore, 'favorites', userId);
+
+        try {
+            const favoritesDoc = await getDoc(favoritesRef);
+            let favorites = { books: [] };
+
+            if (favoritesDoc.exists()) {
+                favorites = favoritesDoc.data();
+            }
+
+            // Remove the book from the favorites list
+            const updatedFavorites = favorites.books.filter(favBookId => favBookId !== bookId);
+            favorites.books = updatedFavorites;
+
+            await setDoc(favoritesRef, favorites);
+            alert('Book removed from favorites.');
+            loadFavorites(); // Refresh the favorites list
+        } catch (error) {
+            console.error('Error removing from favorites:', error);
+            alert('There was an error removing the book from favorites. Please try again.');
+        }
+    };
+
+    // Load the user's favorite books
+    async function loadFavorites() {
+        const favoriteList = document.getElementById('favoriteList');
+        const user = auth.currentUser;
+
+        if (!user) {
+            alert('User not logged in. Redirecting to login.');
+            window.location.href = 'login.html';
+            return;
+        }
+
+        const userId = user.uid;
+        const favoritesRef = doc(firestore, 'favorites', userId);
+
+        try {
+            const favoritesDoc = await getDoc(favoritesRef);
+            favoriteList.innerHTML = ''; // Clear the list
+
+            if (favoritesDoc.exists()) {
+                const favorites = favoritesDoc.data().books;
+                if (favorites.length > 0) {
+                    favorites.forEach(async (bookId) => {
+                        const bookRef = doc(firestore, 'Books', bookId);
+                        const bookDoc = await getDoc(bookRef);
+
+                        if (bookDoc.exists()) {
+                            const book = bookDoc.data();
+                            const bookElement = document.createElement('li');
+                            bookElement.innerHTML = `
+                                <img src="${book.imageUrl}" alt="${book.title}" style="width: 100px; height: auto;">
+                                <h3>${book.title}</h3>
+                                <p>Author: ${book.author}</p>
+                                <p>Price: R${book.price}</p>
+                                <button onclick="updateCart('${bookId}', 'borrow', '${book.title}', ${book.price})">Borrow</button>
+                                <button onclick="updateCart('${bookId}', 'buy', '${book.title}', ${book.price})">Buy</button>
+                                <button onclick="removeFromFavorites('${bookId}')">Remove from Favorites</button>
+                            `;
+                            favoriteList.appendChild(bookElement);
+                        }
+                    });
+                } else {
+                    favoriteList.innerHTML = '<p>You have no favorite books.</p>';
+                }
+            } else {
+                favoriteList.innerHTML = '<p>You have no favorite books.</p>';
+            }
+        } catch (error) {
+            console.error('Error loading favorites:', error);
+            alert('There was an error loading your favorites. Please try again.');
+        }
+    }
+
+    // Ensure user is authenticated
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            loadFavorites(); // User is authenticated, load their favorite books
+        } else {
+            alert('User not logged in. Redirecting to login.');
+            window.location.href = 'login.html';
+        }
+    });
+</script>
+<style>
+	/* Styles for the container and favorite book list */
+.container {
+    width: 80%;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+#favoriteList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#favoriteList li {
+    width: 200px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    text-align: center;
+    background-color: #fff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+#favoriteList li img {
+    width: 100%;
+    height: auto;
+    border-radius: 5px;
+}
+
+#favoriteList li h3 {
+    font-size: 1.2rem;
+    color: #333;
+    margin: 10px 0;
+}
+
+#favoriteList li p {
+    color: #555;
+    margin: 5px 0;
+}
+
+#favoriteList li button {
+    margin-top: 10px;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    background-color: #007bff;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.3s;
+}
+
+#favoriteList li button:hover {
+    background-color: #0056b3;
+}
+
+
+</style>
+</head>
+<body>
+    <header>
+        <img src="pictures/Logo.png" alt="Logo" style="width: 100px; height: auto;" class="logo">
+		<div style="margin-left: 15px;">
+            <h2 style="margin: 0; font-size: 1.5rem; color: #333;">Light of Literacy</h2>
+            <p style="margin: 0; font-size: 0.9rem; color: #666;">Illuminating the path to knowledge</p>
+        </div>
+		<h1>My Favorite Books</h1>
+		<div class="header-links"> 
+			<a href="user_cart.html" class="icon-link">
+			<i class="fas fa-shopping-cart"></i> <span>Cart</span>
+			</a>
+			<a href="user_favorites.html" class="icon-link">
+			<i class="fas fa-heart"></i> <span>Favorites</span>
+			</a>
+		</div>
+    </header>
+
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="user_catalogue.html">Catalogue</a>
+        <a href="user_about_us.html">About Us</a>
+		<a href="contact_us.html">Contact Us</a>
+        <a href="user_account.html">My Account</a>
+        
+    </nav>
+
+    <div class="container">
+        <ul id="favoriteList">
+            <!-- Favorite books will be populated here -->
+        </ul>
+    </div>
+
+    <footer>
+        <p>
+            <a href="index.html">Home</a>
+            <a href="user_catalogue.html">Catalogue</a>
+            <a href="user_about_us.html">About Us</a>
+            <a href="contact_us.html">Contact Us</a>
+			<a href="home.html">Log off</a>
+        </p>
+        <div class="footer-details">
+            <p>&copy; 2024 MN Designs. All rights reserved.</p>
+            <p>
+            <a href="https://www.google.com/maps/place/23+Jorissen+Street,+Braamfontein" target="_blank">23 Jorissen street, Braaamfontein</a> |
+            <a href="tel:+27641057114">Phone: +2764 105 7114</a> |
+            <a href="mailto:contact@library.com">Email: contact@library.com</a>
+        </p>
+        </div>
+    </footer>
+</body>
+</html>

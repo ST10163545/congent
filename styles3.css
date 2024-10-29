@@ -1,0 +1,202 @@
+/* Reset styles */
+body, h1, h2, p, ul, li, table {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    color: #333;
+    background-image: url("pictures/back4.png"); /* Your image path */
+    background-size: cover; /* Makes the image cover the whole page */
+    background-position: center; /* Center the image */
+    background-attachment: fixed; /* Fixed background */
+}
+
+/* Header */
+header {
+    background-color: #fff; /* White background */
+    color: #000; /* Optional: Change text color to black for better contrast */
+    padding: 1rem;
+    display: flex; /* Use flexbox for layout */
+    align-items: center; /* Center items vertically */
+    justify-content: space-between; /* Space between logos and title */
+    border-bottom: 1px solid #ddd; /* Optional: Add a border for separation */
+}
+
+header img {
+    margin-right: 20px; /* Add some space between logo and heading */
+    width: 150px; /* Logo width */
+    height: auto; /* Maintain aspect ratio */
+}
+
+header h1 {
+    flex-grow: 1; /* Allow the heading to grow and take available space */
+    text-align: center; /* Center the heading text */
+    margin: 0; /* Reset margin */
+}
+
+/* Navigation */
+nav {
+    background-color: #d32f2f; /* Lighter red for navigation background */
+    color: #fff;
+    padding: 0.5rem;
+    text-align: center;
+}
+
+nav a {
+    color: #fff;
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    display: inline-block;
+}
+
+nav a:hover {
+    background-color: #c62828; /* Slightly darker red on hover */
+}
+
+/* Header Links */
+.header-links a i {
+    font-size: 2rem; /* Adjust icon size as desired */
+    color: #333; /* Default icon color */
+}
+
+.header-links a span {
+    display: none;
+    margin-left: 5px;
+    font-size: 1rem; /* Text label size */
+}
+
+.header-links a:hover span {
+    display: inline;
+}
+
+.header-links a:hover i {
+    color: #d32f2f; /* Adjust hover color */
+}
+
+.header-links a {
+    margin-left: 15px;
+    text-decoration: none;
+}
+
+/* Search Bar */
+.search-bar {
+    margin: 20px;
+    text-align: center;
+}
+
+.search-bar input {
+    padding: 10px;
+    width: 300px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.search-bar button {
+    padding: 10px 20px;
+    border: none;
+    background-color: #4CAF50;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.search-bar button:hover {
+    background-color: #45a049;
+}
+
+/* Container */
+.container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 1rem;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Books Container */
+.books-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.book-card {
+    border: 1px solid #ccc;
+    padding: 10px;
+    width: 150px;
+    text-align: center;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.book-card img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+}
+
+/* Footer */
+footer {
+    background-color: #b22222; /* Dark red for footer background */
+    color: #fff;
+    padding: 1.5rem;
+    text-align: center;
+    position: relative;
+    bottom: 0;
+    width: 100%;
+}
+
+footer p {
+    margin: 0.5rem 0;
+}
+
+footer a {
+    color: #fff; /* Ensures the footer links are white */
+    text-decoration: none;
+    margin: 0 15px;
+    font-size: 1rem;
+}
+
+footer a:hover {
+    text-decoration: underline;
+}
+
+.footer-details {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+/* Responsive Footer */
+@media (max-width: 768px) {
+    footer a {
+        display: block;
+        margin: 5px 0;
+    }
+
+    .footer-details {
+        font-size: 0.85rem;
+    }
+}
+.login-link {
+    font-size: 1.2rem;
+    color: #d32f2f;
+    background-color: #fff;
+    padding: 10px 20px;
+    border: 2px solid #d32f2f;
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* Hover effect */
+.login-link:hover {
+    background-color: #d32f2f;
+    color: #fff;
+}

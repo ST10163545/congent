@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Account</title>
+    <link rel="stylesheet" href="styles3.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js';
+        import { getFirestore, doc, getDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js';
+        import { getAuth, onAuthStateChanged, updatePassword } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDVi8qTXuTrefxA7-DrwcefJVzjpBUVGvY",
+            authDomain: "library-189c4.firebaseapp.com",
+            projectId: "library-189c4",
+            storageBucket: "library-189c4.appspot.com",
+            messagingSenderId: "33646061345",
+            appId: "1:33646061345:web:e5532c3f3d02006c7c0060",
+            measurementId: "G-8LV0Y2D39Z"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const firestore = getFirestore(app);
+        const auth = getAuth(app);
+
+        async function loadUserAccount() {
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    const userId = user.uid;
+                    console.log(`User ID: ${userId}`);  // Debugging: Log user ID to console
+                    try {
+                        const userDoc = doc(firestore, 'users', userId);
+                        const userSnapshot = await getDoc(userDoc);
+                        if (userSnapshot.exists()) {
+                            const userData = userSnapshot.data();
+                            console.log('User Data:', userData);  // Debugging: Log user data to console
+                            document.getElementById('username').textContent = userData.username || 'Not available';
+                            document.getElementById('email').textContent = userData.email || 'Not available';
+
+                            // Set current values in the input fields
+                            document.getElementById('new-username').value = userData.username || '';
+                            document.getElementById('new-email').value = userData.email || '';
+                        } else {
+                            document.getElementById('account-info').innerHTML = '<p>User document not found. Please contact support.</p>';
+                        }
+                    } catch (error) {
+                        console.error('Error loading user account: ', error);
+                        document.getElementById('account-info').innerHTML = '<p>There was an error loading your account information. Please try again later.</p>';
+                    }
+                } else {
+                    alert('You need to log in to view your account.');
+                    window.location.href = 'login.html';
+                }
+            });
+        }
+
+        async function updateAccount() {
+            const user = auth.currentUser;
+            if (!user) {
+                alert('You need to log in to update your account.');
+                return;
+            }
+
+            const userId = user.uid;
+            const newUsername = document.getElementById('new-username').value;
+            const newEmail = document.getElementById('new-email').value;
+
+            try {
+                const userDoc = doc(firestore, 'users', userId);
+                await updateDoc(userDoc, {
+                    username: newUsername,
+                    email: newEmail
+                });
+                alert('Account details updated successfully.');
+                loadUserAccount(); // Refresh user info after update
+                toggleDropdown(); // Close dropdown after update
+            } catch (error) {
+                console.error('Error updating account: ', error);
+                alert('There was an error updating your account. Please try again.');
+            }
+        }
+
+        async function updatePasswordFunction() {
+            const user = auth.currentUser;
+            if (!user) {
+                alert('You need to log in to update your password.');
+                return;
+            }
+
+            const newPassword = document.getElementById('new-password').value;
+            try {
+                await updatePassword(user, newPassword);
+                alert('Password updated successfully.');
+            } catch (error) {
+                console.error('Error updating password: ', error);
+                alert('There was an error updating your password. Please try again.');
+            }
+        }
+
+        // Attach functions to the window object to make them globally accessible
+        window.toggleDropdown = function() {
+            const dropdown = document.getElementById('update-dropdown');
+            dropdown.style.display = dropdown.style.display === 'none' || dropdown.style.display === '' ? 'block' : 'none';
+        };
+
+        window.updateAccount = updateAccount; // Attach updateAccount to window
+        window.updatePasswordFunction = updatePasswordFunction; // Attach updatePasswordFunction to window
+
+        // Call the function to load user account data when the page loads
+        document.addEventListener('DOMContentLoaded', loadUserAccount);
+    </script>
+
+    <style>
+        
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .account-info p {
+            margin: 5px 0;
+        }
+        .account-management p {
+            margin: 10px 0;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #update-dropdown {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        
+    .account-management a {
+        text-decoration: none; /* Remove underline */
+        color: #007bff; /* Primary link color */
+        font-weight: bold; /* Make the link text bold */
+        padding: 8px 12px; /* Add some padding around the links */
+        border-radius: 5px; /* Rounded corners */
+        transition: background-color 0.3s, color 0.3s; /* Smooth transition for hover effects */
+    }
+
+    .account-management a:hover {
+        background-color: #007bff; /* Change background on hover */
+        color: white; /* Change text color on hover */
+    }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="pictures/Logo.png" alt="Logo" class="logo">
+        <div style="margin-left: 15px;">
+            <h2>Light of Literacy</h2>
+            <p>Illuminating the path to knowledge</p>
+        </div>
+        <h1>My Account</h1>
+        <div class="header-links"> 
+            <a href="user_cart.html" class="icon-link">
+                <i class="fas fa-shopping-cart"></i> <span>Cart</span>
+            </a>
+            <a href="user_favorites.html" class="icon-link">
+                <i class="fas fa-heart"></i> <span>Favorites</span>
+            </a>
+        </div>
+    </header>
+
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="user_catalogue.html">Catalogue</a>
+        <a href="user_about_us.html">About Us</a>
+        <a href="contact_us.html">Contact Us</a>
+        <a href="user_account.html">My Account</a>
+    </nav>
+
+    <div class="container">
+        <h2>Your Account Details</h2>
+        <p>Here you can view and update your account information.</p>
+
+        <div class="account-info" id="account-info">
+            <p><strong>Username:</strong> <span id="username">Loading...</span></p>
+            <p><strong>Email:</strong> <span id="email">Loading...</span></p>
+        </div>
+		<button onclick="toggleDropdown()">Update Account Information</button>
+<div id="update-dropdown" style="display: none;">
+    <h3>Update Your Information</h3>
+    
+    <label for="new-username">New Username:</label>
+    <input type="text" id="new-username" placeholder="New Username" required>
+    
+    <label for="new-email">New Email:</label>
+    <input type="email" id="new-email" placeholder="New Email" required>
+    
+    <button onclick="updateAccount()">Update Account</button>
+
+    <h3>Update Your Password</h3>
+    
+    <label for="new-password">New Password:</label>
+    <input type="password" id="new-password" placeholder="New Password" required>
+    
+    <button onclick="updatePasswordFunction()">Update Password</button>
+</div>
+
+
+        <div class="account-management">
+            <p><a href="user_reserved_books.html">Reserved Books</a></p>
+            <p><a href="user_bought_books.html">Purchased Books</a></p>
+			<p><a href="fines.html">Fines</a></p>
+        </div>
+
+        
+		<br>
+		<button onclick="window.location.href='home.html'">Log Off</button>
+    </div>
+
+    <footer>
+        <p>
+            <a href="index.html">Home</a>
+            <a href="user_catalogue.html">Catalogue</a>
+            <a href="user_about_us.html">About Us</a>
+            <a href="contact_us.html">Contact Us</a>
+			<a href="home.html">Log off</a>
+        </p>
+        <div class="footer-details">
+            <p>&copy; 2024 MN Designs. All rights reserved.</p>
+            <p>
+            <a href="https://www.google.com/maps/place/23+Jorissen+Street,+Braamfontein" target="_blank">23 Jorissen street, Braaamfontein</a> |
+            <a href="tel:+27641057114">Phone: +2764 105 7114</a> |
+            <a href="mailto:contact@library.com">Email: contact@library.com</a>
+        </p>
+        </div>
+    </footer>
+</body>
+</html>

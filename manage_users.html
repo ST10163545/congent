@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Users (Librarian)</title>
+    <link rel="stylesheet" href="styles3.css">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+    <style>
+        .edit-user-container {
+            display: none;
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .search-container {
+            margin-bottom: 20px;
+        }
+        .search-container input {
+            padding: 8px;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        button {
+            margin-left: 10px;
+        }
+		button.edit-button, button.delete-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 12px;
+    font-size: 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button.edit-button i, button.delete-btn i,
+button.edit-button .material-icons, button.delete-btn .material-icons {
+    font-size: 18px;
+}
+
+button.edit-button {
+    background-color: #4CAF50;
+    color: white;
+}
+
+button.delete-btn {
+    background-color: #f44336;
+    color: white;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+	<header>
+        <img src="pictures/Logo.png" alt="Logo" style="width: 100px; height: auto;" class="logo">
+		<div style="margin-left: 15px;">
+            <h2 style="margin: 0; font-size: 1.5rem; color: #333;">Light of Literacy</h2>
+            <p style="margin: 0; font-size: 0.9rem; color: #666;">Illuminating the path to knowledge</p>
+        </div>
+		<h1>Manage Users</h1>
+		
+    </header>
+        
+        <nav>
+            <ul>
+                <a href="admin_dashboard.html">Dashboard</a>
+                <a href="manage_books.html">Manage Books</a>
+                <a href="manage_users.html">Manage Users</a>
+                <a href="manage_transactions.html">Manage Transactions</a>
+                <a href="manage_reservations.html">Manage Reservations</a>
+                <a href="admin_messages.html">View Messages</a>
+				<a href="admin_logs.html">Logs</a>
+                <a href="admin_login.html">Logout</a>
+            </ul>
+        </nav>
+        <form id="add-user-form">
+            <input type="text" id="name" placeholder="Name" required><br>
+            <input type="text" id="surname" placeholder="Surname" required><br>
+            <input type="text" id="username" placeholder="Username" required><br>
+            <input type="email" id="email" placeholder="Email" required><br>
+            <input type="password" id="password" placeholder="Password" required><br>
+            <input type="password" id="confirm-password" placeholder="Confirm Password" required><br>
+            <select id="role" required>
+                <option value="" disabled selected>Select Role</option>
+                <option value="user">User</option>
+                <option value="librarian">Librarian</option>
+                <option value="admin">Admin</option>
+            </select><br>
+            <button type="submit">Add User</button>
+        </form>
+
+        <h2>User List</h2>
+        <div class="search-container">
+            <input type="text" id="search" placeholder="Search users...">
+            <button id="search-btn">Search</button>
+        </div>
+        <table id="user-list">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Surname</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- User rows will be inserted here -->
+            </tbody>
+        </table>
+
+        <a href="librarian_dashboard.html">Back to Dashboard</a>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js';
+        import { getFirestore, collection, setDoc, getDocs, deleteDoc, doc, addDoc } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js';
+        import { getAuth, createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDVi8qTXuTrefxA7-DrwcefJVzjpBUVGvY",
+            authDomain: "library-189c4.firebaseapp.com",
+            projectId: "library-189c4",
+            storageBucket: "library-189c4.appspot.com",
+            messagingSenderId: "33646061345",
+            appId: "1:33646061345:web:e5532c3f3d02006c7c0060",
+            measurementId: "G-8LV0Y2D39Z"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        const addUserForm = document.getElementById('add-user-form');
+        const userList = document.getElementById('user-list').querySelector('tbody');
+        const searchInput = document.getElementById('search');
+
+        addUserForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('name').value;
+            const surname = document.getElementById('surname').value;
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            const role = document.getElementById('role').value;
+
+            if (password !== confirmPassword) {
+                alert('Passwords do not match.');
+                return;
+            }
+
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                await setDoc(doc(db, 'users', user.uid), {
+                    uid: user.uid,
+                    name,
+                    surname,
+                    username,
+                    email,
+                    role
+                });
+
+                // Log the action of adding a user
+                await addDoc(collection(db, 'AdminLogs'), {
+                    action: `Added user ${username}`,
+                    timestamp: new Date().toISOString(),
+                    userEmail: auth.currentUser.email // Log the email of the user performing the action
+                });
+
+                alert('User added successfully!');
+                loadUsers();
+                addUserForm.reset();
+            } catch (error) {
+                console.error('Error adding user:', error);
+                alert(`Error adding user: ${error.message}`);
+            }
+        });
+
+        async function loadUsers(query = "") {
+            try {
+                const usersSnapshot = await getDocs(collection(db, 'users'));
+                userList.innerHTML = '';
+                usersSnapshot.forEach((doc) => {
+                    const user = doc.data();
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${user.name}</td>
+                        <td>${user.surname}</td>
+                        <td>${user.username}</td>
+                        <td><a href="mailto:${user.email}">${user.email}</a></td>
+                        <td>${user.role}</td>
+                        <td>
+                            <button id="edit-${doc.id}" class="edit-button">
+    <i class="fas fa-edit"></i> Edit
+</button>
+<button data-id="${doc.id}" class="delete-btn">
+    <i class="fas fa-trash-alt"></i> Delete
+</button>
+
+
+                            <div id="edit-container-${doc.id}" class="edit-user-container">
+                                <input type="text" id="edit-name-${doc.id}" value="${user.name}" placeholder="Name" required><br>
+                                <input type="text" id="edit-surname-${doc.id}" value="${user.surname}" placeholder="Surname" required><br>
+                                <input type="text" id="edit-username-${doc.id}" value="${user.username}" placeholder="Username" required><br>
+                                <input type="email" id="edit-email-${doc.id}" value="${user.email}" placeholder="Email" required><br>
+                                <select id="edit-role-${doc.id}">
+                                    <option value="user" ${user.role === 'user' ? 'selected' : ''}>User</option>
+                                    <option value="librarian" ${user.role === 'librarian' ? 'selected' : ''}>Librarian</option>
+                                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                                </select><br>
+                                <button id="save-changes-${doc.id}" class="save-changes">Save Changes</button>
+                                <button id="cancel-edit-${doc.id}" class="cancel-edit">Cancel</button>
+                            </div>
+                        </td>
+                    `;
+                    if (query === "" || 
+                        user.name.toLowerCase().includes(query.toLowerCase()) || 
+                        user.surname.toLowerCase().includes(query.toLowerCase()) || 
+                        user.username.toLowerCase().includes(query.toLowerCase()) || 
+                        user.email.toLowerCase().includes(query.toLowerCase())) {
+                        userList.appendChild(row);
+                    }
+                });
+
+                document.querySelectorAll('.edit-button').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const userId = e.target.id.split('-')[1];
+                        toggleEditContainer(userId);
+                    });
+                });
+
+                document.querySelectorAll('.delete-btn').forEach(button => {
+                    button.addEventListener('click', async (e) => {
+                        const userId = e.target.dataset.id;
+                        const confirmation = confirm('Are you sure you want to delete this user?');
+                        if (confirmation) {
+                            await deleteDoc(doc(db, 'users', userId));
+                            // Log the action of deleting a user
+                            await addDoc(collection(db, 'AdminLogs'), {
+                                action: `Deleted user ${userId}`,
+                                timestamp: new Date().toISOString(),
+                                userEmail: auth.currentUser.email
+                            });
+                            loadUsers();
+                        }
+                    });
+                });
+
+                document.querySelectorAll('.save-changes').forEach(button => {
+                    button.addEventListener('click', async (e) => {
+                        const userId = e.target.id.split('-')[2];
+                        const name = document.getElementById(`edit-name-${userId}`).value;
+                        const surname = document.getElementById(`edit-surname-${userId}`).value;
+                        const username = document.getElementById(`edit-username-${userId}`).value;
+                        const email = document.getElementById(`edit-email-${userId}`).value;
+                        const role = document.getElementById(`edit-role-${userId}`).value;
+
+                        await setDoc(doc(db, 'users', userId), {
+                            name,
+                            surname,
+                            username,
+                            email,
+                            role
+                        });
+
+                        // Log the action of updating a user
+                        await addDoc(collection(db, 'AdminLogs'), {
+                            action: `Updated user ${username}`,
+                            timestamp: new Date().toISOString(),
+                            userEmail: auth.currentUser.email
+                        });
+
+                        toggleEditContainer(userId);
+                        loadUsers();
+                    });
+                });
+
+                document.querySelectorAll('.cancel-edit').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const userId = e.target.id.split('-')[2];
+                        toggleEditContainer(userId);
+                    });
+                });
+            } catch (error) {
+                console.error('Error loading users:', error);
+                alert(`Error loading users: ${error.message}`);
+            }
+        }
+
+        function toggleEditContainer(userId) {
+            const container = document.getElementById(`edit-container-${userId}`);
+            container.style.display = container.style.display === 'none' ? 'block' : 'none';
+        }
+
+        document.getElementById('search-btn').addEventListener('click', () => {
+            const query = searchInput.value.trim();
+            loadUsers(query);
+        });
+
+        loadUsers();
+    </script>
+</body>
+</html>
